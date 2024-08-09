@@ -3,8 +3,18 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: "https",
         hostname: "static.vecteezy.com",
+        protocol: "https",
+        port: "",
+      },
+      {
+        hostname: "a0.muscache.com",
+        protocol: "https",
+        port: "",
+      },
+      {
+        hostname: "glvmmupiqwlmhicmggqp.supabase.co",
+        protocol: "https",
         port: "",
       },
     ],

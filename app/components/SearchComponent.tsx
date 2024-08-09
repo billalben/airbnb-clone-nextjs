@@ -21,6 +21,7 @@ import {
 
 import { Search } from "lucide-react";
 import { useState } from "react";
+import { useCountries } from "../lib/getCountries";
 import { Button } from "@/components/ui/button";
 import { CreationSubmit } from "./SubmitButtons";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -29,6 +30,7 @@ import { Counter } from "./Counter";
 export function SearchModalComponent() {
   const [step, setStep] = useState(1);
   const [locationValue, setLocationValue] = useState("");
+  const { getAllCountries } = useCountries();
 
   function SubmitButtonLocal() {
     if (step === 1) {
@@ -78,9 +80,11 @@ export function SearchModalComponent() {
                 <SelectContent>
                   <SelectGroup>
                     <SelectLabel>Countries</SelectLabel>
-                    <SelectItem value="usa">USA</SelectItem>
-                    <SelectItem value="canada">Canada</SelectItem>
-                    <SelectItem value="mexico">Mexico</SelectItem>
+                    {getAllCountries().map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.flag} {item.label} / {item.region}
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
