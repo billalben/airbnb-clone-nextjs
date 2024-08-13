@@ -5,7 +5,7 @@ import { Minus, Plus } from "lucide-react";
 import { useState } from "react";
 
 export function Counter({ name }: { name: string }) {
-  const [amount, setAmount] = useState(0);
+  const [amount, setAmount] = useState(1);
 
   function increase() {
     if (amount >= 10) return;
@@ -20,8 +20,9 @@ export function Counter({ name }: { name: string }) {
   return (
     <div className="flex items-center gap-x-2">
       <input type="hidden" name={name} value={amount} />
+
       <Button
-        disabled={amount === 0}
+        disabled={amount === 1}
         variant="outline"
         size="icon"
         type="button"

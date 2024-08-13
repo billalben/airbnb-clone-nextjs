@@ -27,11 +27,11 @@ export function MapFilterItems() {
         key={id}
         href={`${pathname}?${createQueryString("filter", name)}`}
         className={cn(
-          search === name ? "border-b-2 border-black pb-2" : "opacity-70",
-          "flex flex-shrink-0 flex-col items-center gap-y-3",
+          "min-w-24 space-y-3 border-b-2 border-transparent pb-2",
+          search === name ? "border-black" : "opacity-60",
         )}
       >
-        <div className="relative h-6 w-6">
+        <div className="relative mx-auto h-6 w-6">
           <Image
             src={imageUrl}
             alt={`${title} category image`}
@@ -40,13 +40,13 @@ export function MapFilterItems() {
             height={24}
           />
         </div>
-        <p className="text-xs font-medium">{title}</p>
+        <p className="text-center text-xs font-medium">{title}</p>
       </Link>
     ));
   }, [createQueryString, search, pathname]);
 
   return (
-    <div className="no-scrollbar mt-5 flex w-full gap-x-10 overflow-x-scroll">
+    <div className="no-scrollbar mt-5 flex w-full items-center gap-x-5 overflow-x-scroll">
       {renderedItems}
     </div>
   );
