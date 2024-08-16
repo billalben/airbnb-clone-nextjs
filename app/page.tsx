@@ -46,7 +46,11 @@ async function getData(searchParams: TypeSearchParams, userId?: string) {
   return data;
 }
 
-export default function Home(searchParams: TypeSearchParams) {
+export default function Home({
+  searchParams,
+}: {
+  searchParams?: TypeSearchParams;
+}) {
   return (
     <div className="container mx-auto px-5 lg:px-10">
       <MapFilterItems />
