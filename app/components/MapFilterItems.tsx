@@ -27,8 +27,9 @@ export function MapFilterItems() {
         key={id}
         href={`${pathname}?${createQueryString("filter", name)}`}
         className={cn(
-          "min-w-24 space-y-3 border-b-2 border-transparent pb-2",
+          "min-w-32 space-y-3 border-b-2 border-transparent py-2",
           search === name ? "border-black" : "opacity-60",
+          "transition-all hover:bg-slate-200 hover:opacity-100",
         )}
       >
         <div className="relative mx-auto h-6 w-6">
@@ -46,7 +47,7 @@ export function MapFilterItems() {
   }, [createQueryString, search, pathname]);
 
   return (
-    <div className="no-scrollbar mt-5 flex w-full items-center gap-x-5 overflow-x-scroll">
+    <div className="no-scrollbar mt-2 flex w-full items-center overflow-x-scroll">
       {renderedItems}
     </div>
   );
