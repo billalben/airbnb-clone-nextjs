@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import prisma from "./lib/db";
-import { supabase } from "./lib/supabase";
+import { createClient as createSupabaseClient } from "./lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function createAirbnbHome({ userId }: { userId: string }) {
@@ -88,6 +88,8 @@ export async function CreateDescription(formData: FormData) {
   ) {
     throw new Error("All fields are required.");
   }
+
+  const supabase = await createSupabaseClient();
 
   const { data: imageData } = await supabase.storage
     .from("images")

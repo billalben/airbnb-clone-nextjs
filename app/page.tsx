@@ -6,7 +6,7 @@ import { SkeltonCard } from "./components/SkeletonCard";
 import { NoItems } from "./components/NoItem";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { ListingCard } from "./components/ListingCard";
-import { unstable_noStore as noStore } from "next/cache";
+import { connection } from "next/server";
 
 type TypeSearchParams = {
   filter?: string;
@@ -17,7 +17,7 @@ type TypeSearchParams = {
 };
 
 async function getData(searchParams: TypeSearchParams, userId?: string) {
-  noStore();
+  await connection();
   const data = await prisma.home.findMany({
     where: {
       addedCategory: true,
@@ -46,17 +46,18 @@ async function getData(searchParams: TypeSearchParams, userId?: string) {
   return data;
 }
 
-export default function Home({
+export default async function Home({
   searchParams,
 }: {
-  searchParams?: TypeSearchParams;
+  searchParams?: Promise<TypeSearchParams>;
 }) {
+  const params = await searchParams;
   return (
     <div className="container mx-auto px-5 lg:px-10">
       <MapFilterItems />
 
       <Suspense fallback={<SkeletonLoading />}>
-        <ShowItems {...searchParams} />
+        <ShowItems {...params} />
       </Suspense>
     </div>
   );

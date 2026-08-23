@@ -32,18 +32,6 @@ export function SearchModalComponent() {
   const [locationValue, setLocationValue] = useState("");
   const { getAllCountries } = useCountries();
 
-  function SubmitButtonLocal() {
-    if (step === 1) {
-      return (
-        <Button onClick={() => setStep((prev) => prev + 1)} type="button">
-          Next
-        </Button>
-      );
-    } else if (step === 2) {
-      return <CreationSubmit />;
-    }
-  }
-
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -136,7 +124,13 @@ export function SearchModalComponent() {
           )}
 
           <DialogFooter>
-            <SubmitButtonLocal />
+            {step === 1 ? (
+              <Button onClick={() => setStep((prev) => prev + 1)} type="button">
+                Next
+              </Button>
+            ) : step === 2 ? (
+              <CreationSubmit />
+            ) : null}
           </DialogFooter>
         </form>
       </DialogContent>
