@@ -4,17 +4,17 @@ import { HomeMap } from "@/app/components/HomeMap";
 import { SelectCalender } from "@/app/components/SelectCalender";
 import { ReservationSubmitButton } from "@/app/components/SubmitButtons";
 import prisma from "@/app/lib/db";
-import { useCountries } from "@/app/lib/getCountries";
+import { getCountryByValue } from "@/app/lib/getCountries";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
 import Image from "next/image";
 import Link from "next/link";
-import { unstable_noStore as noStore } from "next/cache";
+import { connection } from "next/server";
 
 async function getData(homeId: string) {
-  noStore();
+  await connection();
   const data = await prisma.home.findUnique({
     where: {
       id: homeId,
@@ -50,10 +50,10 @@ async function getData(homeId: string) {
 export default async function HomeRoute({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const data = await getData(params.id);
-  const { getCountryByValue } = useCountries();
+  const { id } = await params;
+  const data = await getData(id);
   const country = getCountryByValue(data?.country as string);
   const { getUser } = getKindeServerSession();
   const user = await getUser();
@@ -108,7 +108,7 @@ export default async function HomeRoute({
         </div>
 
         <form action={createReservation} className="mx-auto">
-          <input type="hidden" name="homeId" value={params.id} />
+          <input type="hidden" name="homeId" value={id} />
           <input type="hidden" name="userId" value={user?.id} />
 
           <SelectCalender reservation={data?.Reservation} />
