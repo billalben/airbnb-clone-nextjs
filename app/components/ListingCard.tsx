@@ -5,7 +5,7 @@ import { AddToFavoriteButton, DeleteFromFavoriteButton } from "./SubmitButtons";
 import { DeleteFromFavorite, addToFavorite } from "../actions";
 
 interface iAppProps {
-  imagePath: string;
+  imageUrl: string | null;
   description: string;
   location: string;
   price: number;
@@ -18,7 +18,7 @@ interface iAppProps {
 
 export function ListingCard({
   description,
-  imagePath,
+  imageUrl,
   location,
   price,
   userId,
@@ -33,12 +33,16 @@ export function ListingCard({
   return (
     <div className="flex flex-col border">
       <div className="relative h-72">
-        <Image
-          src={`https://ggjguhvpjfiqzfeofnia.supabase.co/storage/v1/object/public/images/${imagePath}`}
-          alt="Image of House"
-          fill
-          className="h-full rounded-lg object-cover"
-        />
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt="Image of House"
+            fill
+            className="h-full rounded-lg object-cover"
+          />
+        ) : (
+          <div className="h-full w-full rounded-lg bg-muted" />
+        )}
 
         {userId && (
           <div className="absolute right-2 top-2 z-10">

@@ -2,8 +2,20 @@
 
 import { redirect } from "next/navigation";
 import prisma from "./lib/db";
-import { createClient as createSupabaseClient } from "./lib/supabase/server";
+import { createStorageClient } from "./lib/supabase/storage-server";
 import { revalidatePath } from "next/cache";
+
+const EXTENSION_BY_MIME: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+function getFileExtension(file: File): string {
+  const fromName = file.name.split(".").pop()?.toLowerCase();
+  if (fromName) return fromName;
+  return EXTENSION_BY_MIME[file.type] ?? "jpg";
+}
 
 export async function createAirbnbHome({ userId }: { userId: string }) {
   if (!userId) throw new Error("User ID is required.");
@@ -89,14 +101,26 @@ export async function CreateDescription(formData: FormData) {
     throw new Error("All fields are required.");
   }
 
-  const supabase = await createSupabaseClient();
+  if (imageFile.size > 5 * 1024 * 1024) {
+    throw new Error("Image must be 5MB or smaller.");
+  }
 
-  const { data: imageData } = await supabase.storage
-    .from("images")
-    .upload(`${imageFile.name}-${new Date()}`, imageFile, {
+  const supabase = createStorageClient();
+
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? "airbnb-images";
+  const filePath = `homes/${homeId}/${crypto.randomUUID()}.${getFileExtension(imageFile)}`;
+
+  const { data: imageData, error: uploadError } = await supabase.storage
+    .from(bucket)
+    .upload(filePath, imageFile, {
       cacheControl: "216000", // 1 month
-      contentType: "image/png",
+      contentType: imageFile.type,
+      upsert: true,
     });
+
+  if (uploadError || !imageData) {
+    throw new Error(uploadError?.message ?? "Image upload failed.");
+  }
 
   const data = await prisma.home.update({
     where: {

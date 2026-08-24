@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { NoItems } from "../components/NoItem";
 import { ListingCard } from "../components/ListingCard";
 import { unstable_noStore as noStore } from "next/cache";
+import { getImageUrl } from "../lib/supabase/storage";
 
 async function getData(userId: string) {
   noStore();
@@ -42,21 +43,27 @@ export default async function MyHomes() {
     return redirect("/");
   }
   const data = await getData(user.id);
+  const items = await Promise.all(
+    data.map(async (item) => ({
+      ...item,
+      imageUrl: await getImageUrl(item.photo),
+    })),
+  );
   return (
     <section className="container mx-auto mt-10 px-5 lg:px-10">
       <h2 className="text-3xl font-semibold tracking-tight">Your Homes</h2>
 
-      {data.length === 0 ? (
+      {items.length === 0 ? (
         <NoItems
           description="Please list a home on airbnb so that you can see it right here"
           title="Your don&#x27;t have any Homes listed"
         />
       ) : (
         <div className="mt-8 grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {data.map((item) => (
+          {items.map((item) => (
             <ListingCard
               key={item.id}
-              imagePath={item.photo as string}
+              imageUrl={item.imageUrl}
               homeId={item.id}
               price={item.price as number}
               description={item.description as string}

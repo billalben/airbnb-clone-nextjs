@@ -57,7 +57,12 @@ export default async function DescriptionPage({
 
           <div className="flex flex-col gap-y-2">
             <Label>Image</Label>
-            <Input name="image" type="file" required />
+            <Input
+              name="image"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              required
+            />
           </div>
 
           <Card>

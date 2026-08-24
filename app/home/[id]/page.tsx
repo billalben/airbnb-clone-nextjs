@@ -5,6 +5,7 @@ import { SelectCalender } from "@/app/components/SelectCalender";
 import { ReservationSubmitButton } from "@/app/components/SubmitButtons";
 import prisma from "@/app/lib/db";
 import { getCountryByValue } from "@/app/lib/getCountries";
+import { getImageUrl } from "@/app/lib/supabase/storage";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
@@ -54,6 +55,7 @@ export default async function HomeRoute({
 }) {
   const { id } = await params;
   const data = await getData(id);
+  const imageUrl = await getImageUrl(data?.photo);
   const country = getCountryByValue(data?.country as string);
   const { getUser } = getKindeServerSession();
   const user = await getUser();
@@ -62,12 +64,16 @@ export default async function HomeRoute({
     <div className="container mx-auto mb-12 mt-10">
       <h1 className="mb-5 text-2xl font-medium">{data?.title}</h1>
       <div className="relative h-[420px] md:h-[550px]">
-        <Image
-          alt="Image of Home"
-          src={`https://ggjguhvpjfiqzfeofnia.supabase.co/storage/v1/object/public/images/${data?.photo}`}
-          fill
-          className="h-full w-full rounded-lg object-cover"
-        />
+        {imageUrl ? (
+          <Image
+            alt="Image of Home"
+            src={imageUrl}
+            fill
+            className="h-full w-full rounded-lg object-cover"
+          />
+        ) : (
+          <div className="h-full w-full rounded-lg bg-muted" />
+        )}
       </div>
 
       <div className="relative mt-8 grid gap-12 md:grid-cols-[1fr_332px]">

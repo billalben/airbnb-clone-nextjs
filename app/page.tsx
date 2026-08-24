@@ -7,6 +7,7 @@ import { NoItems } from "./components/NoItem";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { ListingCard } from "./components/ListingCard";
 import { connection } from "next/server";
+import { getImageUrl } from "./lib/supabase/storage";
 
 type TypeSearchParams = {
   filter?: string;
@@ -68,20 +69,27 @@ async function ShowItems(searchParams: TypeSearchParams) {
   const user = await getUser();
   const data = await getData(searchParams, user?.id);
 
+  const items = await Promise.all(
+    data.map(async (item) => ({
+      ...item,
+      imageUrl: await getImageUrl(item.photo),
+    })),
+  );
+
   return (
     <>
-      {data.length === 0 ? (
+      {items.length === 0 ? (
         <NoItems
           description="Please check a other category or create your own listing!"
           title="Sorry no listings found for this category..."
         />
       ) : (
         <div className="mt-8 grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {data.map((item) => (
+          {items.map((item) => (
             <ListingCard
               key={item.id}
               description={item.description as string}
-              imagePath={item.photo as string}
+              imageUrl={item.imageUrl}
               location={item.country as string}
               price={item.price as number}
               userId={user?.id}
