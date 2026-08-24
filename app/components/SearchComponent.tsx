@@ -21,7 +21,7 @@ import {
 
 import { Search } from "lucide-react";
 import { useState } from "react";
-import { useCountries } from "../lib/getCountries";
+import { getAllCountries } from "../lib/getCountries";
 import { Button } from "@/components/ui/button";
 import { CreationSubmit } from "./SubmitButtons";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -30,20 +30,21 @@ import { Counter } from "./Counter";
 export function SearchModalComponent() {
   const [step, setStep] = useState(1);
   const [locationValue, setLocationValue] = useState("");
-  const { getAllCountries } = useCountries();
+  const countries = getAllCountries().map((country) => ({
+    value: country.value,
+    label: `${country.flag} ${country.label} / ${country.region}`,
+  }));
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <div className="flex cursor-pointer items-center rounded-full border px-5 py-2">
-          <div className="flex h-full divide-x font-medium">
-            <p className="hidden px-4 sm:block">Anywhere</p>
-            <p className="hidden px-4 sm:block">Any Week</p>
-            <p className="hidden px-4 sm:block">Add Guests</p>
-          </div>
-
-          <Search className="h-8 w-8 rounded-full bg-primary p-2 text-white" />
+      <DialogTrigger className="flex cursor-pointer items-center rounded-full border px-5 py-2">
+        <div className="flex h-full divide-x font-medium">
+          <p className="hidden px-4 sm:block">Anywhere</p>
+          <p className="hidden px-4 sm:block">Any Week</p>
+          <p className="hidden px-4 sm:block">Add Guests</p>
         </div>
+
+        <Search className="h-8 w-8 rounded-full bg-primary p-2 text-white" />
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <form className="flex flex-col gap-4">
@@ -59,7 +60,8 @@ export function SearchModalComponent() {
 
               <Select
                 required
-                onValueChange={(value) => setLocationValue(value)}
+                items={countries}
+                onValueChange={(value) => setLocationValue(value as string)}
                 value={locationValue}
               >
                 <SelectTrigger className="w-full">
@@ -68,9 +70,9 @@ export function SearchModalComponent() {
                 <SelectContent>
                   <SelectGroup>
                     <SelectLabel>Countries</SelectLabel>
-                    {getAllCountries().map((item) => (
+                    {countries.map((item) => (
                       <SelectItem key={item.value} value={item.value}>
-                        {item.flag} {item.label} / {item.region}
+                        {item.label}
                       </SelectItem>
                     ))}
                   </SelectGroup>

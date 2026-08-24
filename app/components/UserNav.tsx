@@ -26,18 +26,16 @@ export async function UserNav() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger>
-        <div className="flex items-center gap-x-3 rounded-full border px-2 py-2 lg:px-4 lg:py-2">
-          <MenuIcon className="h-6 w-6 lg:h-5 lg:w-5" />
+      <DropdownMenuTrigger className="flex items-center gap-x-3 rounded-full border px-2 py-2 lg:px-4 lg:py-2">
+        <MenuIcon className="h-6 w-6 lg:h-5 lg:w-5" />
 
-          <Image
-            src={user?.picture ?? "/user.png"}
-            alt="User Avatar"
-            width={32}
-            height={32}
-            className="hidden rounded-full lg:block"
-          />
-        </div>
+        <Image
+          src={user?.picture ?? "/user.png"}
+          alt="User Avatar"
+          width={32}
+          height={32}
+          className="hidden rounded-full lg:block"
+        />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[200px]">
         {user ? (

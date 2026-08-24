@@ -26,7 +26,7 @@ export function SelectCategory() {
           aria-pressed={selectedCategory === item.name}
         >
           <Card
-            className={`border-2 ${selectedCategory === item.name ? "border-primary bg-gradient-to-r from-red-200 to-zinc-100" : ""}`}
+            className={`border-2 ${selectedCategory === item.name ? "border-primary bg-linear-to-r from-red-200 to-zinc-100" : ""}`}
             onClick={() => setSelectedCategory(item.name)}
           >
             <CardHeader>
