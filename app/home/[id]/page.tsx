@@ -116,8 +116,11 @@ export default async function HomeRoute({
           {user?.id ? (
             <ReservationSubmitButton />
           ) : (
-            <Button className="mx-auto block w-fit" asChild>
-              <Link href="/api/auth/login">Make a Reservation</Link>
+            <Button
+              className="mx-auto block w-fit"
+              render={<Link href="/api/auth/login" />}
+            >
+              Make a Reservation
             </Button>
           )}
         </form>

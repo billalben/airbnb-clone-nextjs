@@ -2,7 +2,7 @@
 
 import { createLocation } from "@/app/actions";
 import { CreationBottomBar } from "@/app/components/CreationBottomBar";
-import { useCountries } from "@/app/lib/getCountries";
+import { getAllCountries } from "@/app/lib/getCountries";
 import {
   Select,
   SelectContent,
@@ -27,7 +27,10 @@ export default function AddressRoute({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { getAllCountries } = useCountries();
+  const countries = getAllCountries().map((country) => ({
+    value: country.value,
+    label: `${country.flag} ${country.label} / ${country.region}`,
+  }));
   const [locationValue, setLocationValue] = useState("");
 
   return (
@@ -43,16 +46,20 @@ export default function AddressRoute({
         <input type="hidden" name="countryValue" value={locationValue} />
         <div className="w-3/5 mx-auto mb-36">
           <div className="mb-5">
-            <Select required onValueChange={(value) => setLocationValue(value)}>
+            <Select
+              required
+              items={countries}
+              onValueChange={(value) => setLocationValue(value as string)}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a Country" />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   <SelectLabel>Countries</SelectLabel>
-                  {getAllCountries().map((item) => (
+                  {countries.map((item) => (
                     <SelectItem key={item.value} value={item.value}>
-                      {item.flag} {item.label} / {item.region}
+                      {item.label}
                     </SelectItem>
                   ))}
                 </SelectGroup>
