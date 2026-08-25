@@ -41,9 +41,11 @@ export function SearchModalComponent() {
         <div className="flex h-full items-center divide-x divide-border/60 font-medium">
           <div className="flex items-center gap-1.5 px-4">
             <Globe className="h-4 w-4 text-muted-foreground" />
-            <span className="max-w-32 truncate">
-              {country ? `${country.flag} ${country.label}` : "Anywhere"}
-            </span>
+            {country ? (
+              <span className="max-w-32 truncate">
+                {country.flag} {country.label}
+              </span>
+            ) : null}
           </div>
           <div className="hidden items-center gap-1.5 px-4 sm:flex">
             <Users className="h-4 w-4 text-muted-foreground" />

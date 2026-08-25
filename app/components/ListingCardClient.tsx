@@ -2,12 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { useCountries } from "../lib/getCountries";
-import {
-  FavoriteButton,
-  FavoriteLoginLink,
-} from "@/components/favorite-form";
+import { FavoriteButton, FavoriteLoginLink } from "@/components/favorite-form";
 import { toggleFavorite } from "../actions";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -25,8 +21,6 @@ interface iAppProps {
   className?: string;
 }
 
-const HOVER_INTERVAL_MS = 2500;
-
 export function ListingCardClient({
   imageUrls,
   title,
@@ -43,20 +37,7 @@ export function ListingCardClient({
   const country = location ? getCountryByValue(location) : undefined;
 
   const validUrls = imageUrls.filter((u): u is string => Boolean(u));
-  const hasMultiple = validUrls.length > 1;
-
-  const [hovering, setHovering] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    if (!hovering || !hasMultiple) return;
-    const id = setInterval(() => {
-      setActiveIndex((i) => (i + 1) % validUrls.length);
-    }, HOVER_INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [hovering, hasMultiple, validUrls.length]);
-
-  const shownUrl = validUrls[activeIndex] ?? validUrls[0] ?? null;
+  const shownUrl = validUrls[0] ?? null;
 
   const heart = userId ? (
     <FavoriteButton
@@ -71,14 +52,7 @@ export function ListingCardClient({
   );
 
   const media = (
-    <div
-      className="relative aspect-[4/3] w-full overflow-hidden bg-muted *:[img]:rounded-none"
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => {
-        setHovering(false);
-        setActiveIndex(0);
-      }}
-    >
+    <div className="relative aspect-4/3 w-full overflow-hidden bg-muted *:[img]:rounded-none">
       {shownUrl ? (
         <Image
           src={shownUrl}
@@ -89,7 +63,7 @@ export function ListingCardClient({
           priority={false}
         />
       ) : null}
-      <div className="absolute right-3 top-3 z-10">{heart}</div>
+      <div className="absolute top-3 right-3 z-10">{heart}</div>
     </div>
   );
 
