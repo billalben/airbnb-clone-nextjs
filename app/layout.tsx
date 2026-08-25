@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { Navbar } from "./components/Navbar";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -27,7 +28,9 @@ export default function RootLayout({
           <Navbar />
           <main className="flex-1">{children}</main>
           <Toaster />
-          <ToastFlash />
+          <Suspense>
+            <ToastFlash />
+          </Suspense>
         </ThemeProvider>
       </body>
     </html>

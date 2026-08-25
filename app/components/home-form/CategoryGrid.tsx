@@ -59,7 +59,7 @@ function CategoryCard({
       <input
         id={id}
         type="radio"
-        name="category"
+        name="categoryName"
         value={name}
         checked={selected}
         onChange={onSelect}

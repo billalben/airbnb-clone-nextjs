@@ -5,15 +5,25 @@ import prisma from "./lib/db";
 import { SkeltonCard } from "./components/SkeletonCard";
 import { NoItems } from "./components/NoItem";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { ListingCard } from "./components/ListingCard";
+import { HomeGrid } from "./components/HomeGrid";
 import { connection } from "next/server";
 import { getImageUrls } from "./lib/supabase/storage";
 import { parseSearchParams } from "./lib/parseSearchParams";
 
+type GridItem = {
+  id: string;
+  title: string | null;
+  price: number | null;
+  description: string | null;
+  country: string | null;
+  imageUrls: (string | null)[];
+  isInFavoriteList: boolean;
+};
+
 async function getData(
   searchParams: ReturnType<typeof parseSearchParams>,
   userId?: string,
-) {
+): Promise<GridItem[]> {
   await connection();
   const data = await prisma.home.findMany({
     where: {
@@ -26,23 +36,42 @@ async function getData(
       bedrooms: searchParams?.room ?? undefined,
       bathrooms: searchParams?.bathroom ?? undefined,
     },
+    orderBy: { createdAT: "desc" },
+    take: 10,
     select: {
       id: true,
+      title: true,
       price: true,
       description: true,
       country: true,
       images: {
-        where: { isPrimary: true },
+        orderBy: [{ isPrimary: "desc" }, { position: "asc" }],
         select: { path: true },
-        take: 1,
       },
       Favorite: {
         where: { userId: userId ?? undefined },
         select: { id: true },
+        take: 1,
       },
     },
   });
-  return data;
+
+  const allPaths = data.flatMap((h) => h.images.map((i) => i.path));
+  const urls = await getImageUrls(allPaths);
+  let cursor = 0;
+
+  return data.map((h) => {
+    const homeUrls = h.images.map(() => urls[cursor++] ?? null);
+    return {
+      id: h.id,
+      title: h.title,
+      price: h.price,
+      description: h.description,
+      country: h.country,
+      imageUrls: homeUrls,
+      isInFavoriteList: (h.Favorite[0]?.id ?? null) !== null,
+    };
+  });
 }
 
 export default async function Home({
@@ -71,48 +100,28 @@ async function ShowItems(
   const user = await getUser();
   const data = await getData(searchParams, user?.id);
 
-  const items = await Promise.all(
-    data.map(async (item) => {
-      const urls = await getImageUrls(item.images.map((i) => i.path));
-      return {
-        ...item,
-        imageUrl: urls[0] ?? null,
-      };
-    }),
-  );
+  if (data.length === 0) {
+    return (
+      <NoItems
+        description="Please check a other category or create your own listing!"
+        title="Sorry no listings found for this category..."
+      />
+    );
+  }
 
   return (
-    <>
-      {items.length === 0 ? (
-        <NoItems
-          description="Please check a other category or create your own listing!"
-          title="Sorry no listings found for this category..."
-        />
-      ) : (
-        <div className="mt-8 grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {items.map((item) => (
-            <ListingCard
-              key={item.id}
-              description={item.description as string}
-              imageUrl={item.imageUrl}
-              location={item.country as string}
-              price={item.price as number}
-              userId={user?.id}
-              favoriteId={item.Favorite[0]?.id}
-              isInFavoriteList={item.Favorite.length > 0 ? true : false}
-              homeId={item.id}
-              pathName="/"
-            />
-          ))}
-        </div>
-      )}
-    </>
+    <HomeGrid
+      initialItems={data}
+      userId={user?.id}
+      pathName="/"
+      filterParams={searchParams}
+    />
   );
 }
 
 function SkeletonLoading() {
   return (
-    <div className="mt-8 grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+    <div className="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
       {Array.from({ length: 8 }).map((_, index) => (
         <SkeltonCard key={index} />
       ))}

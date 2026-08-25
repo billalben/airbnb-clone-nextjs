@@ -2,7 +2,7 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "../lib/db";
 import { redirect } from "next/navigation";
 import { NoItems } from "../components/NoItem";
-import { ListingCard } from "../components/ListingCard";
+import { ListingCardClient } from "../components/ListingCardClient";
 import { DeleteHomeButton } from "../components/DeleteHomeButton";
 import { unstable_noStore as noStore } from "next/cache";
 import { getImageUrls } from "../lib/supabase/storage";
@@ -21,19 +21,20 @@ async function getData(userId: string) {
     },
     select: {
       id: true,
+      title: true,
       country: true,
       description: true,
       price: true,
       images: {
-        where: { isPrimary: true },
+        orderBy: [{ isPrimary: "desc" }, { position: "asc" }],
         select: { path: true },
-        take: 1,
       },
       Favorite: {
         where: {
           userId: userId,
         },
         select: { id: true },
+        take: 1,
       },
     },
     orderBy: {
@@ -52,15 +53,21 @@ export default async function MyHomes() {
     return redirect("/");
   }
   const data = await getData(user.id);
-  const items = await Promise.all(
-    data.map(async (item) => {
-      const urls = await getImageUrls(item.images.map((i) => i.path));
-      return {
-        ...item,
-        imageUrl: urls[0] ?? null,
-      };
-    }),
-  );
+  const allPaths = data.flatMap((h) => h.images.map((i) => i.path));
+  const urls = await getImageUrls(allPaths);
+  let cursor = 0;
+  const items = data.map((h) => {
+    const homeUrls = h.images.map(() => urls[cursor++] ?? null);
+    return {
+      id: h.id,
+      title: h.title,
+      country: h.country,
+      description: h.description,
+      price: h.price,
+      imageUrls: homeUrls,
+      isInFavoriteList: (h.Favorite[0]?.id ?? null) !== null,
+    };
+  });
   return (
     <section className="container mx-auto mt-10 px-5 lg:px-10">
       <h2 className="text-3xl font-semibold tracking-tight">Your Homes</h2>
@@ -71,25 +78,24 @@ export default async function MyHomes() {
           title="Your don&#x27;t have any Homes listed"
         />
       ) : (
-        <div className="mt-8 grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {items.map((item) => (
             <div
               key={item.id}
-              className="flex flex-col rounded-lg border bg-card"
+              className="flex flex-col gap-2"
             >
-              <ListingCard
-                imageUrl={item.imageUrl}
+              <ListingCardClient
+                imageUrls={item.imageUrls}
                 homeId={item.id}
-                price={item.price as number}
-                description={item.description as string}
-                location={item.country as string}
+                title={item.title}
+                price={item.price}
+                location={item.country}
                 userId={user.id}
                 pathName="/my-homes"
-                favoriteId={item.Favorite[0]?.id}
-                isInFavoriteList={item.Favorite.length > 0 ? true : false}
+                isInFavoriteList={item.isInFavoriteList}
                 hideLink
               />
-              <div className="flex gap-2 p-4 pt-0">
+              <div className="flex gap-2">
                 <Button
                   nativeButton={false}
                   render={

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import DesktopLogo from "@/public/airbnb-desktop.png";
 import MobileLogo from "@/public/airbnb-mobile.webp";
 import { UserNav } from "./UserNav";
@@ -23,7 +24,9 @@ export function Navbar() {
           />
         </Link>
 
-        <SearchModalComponent />
+        <Suspense>
+          <SearchModalComponent />
+        </Suspense>
 
         <UserNav />
       </div>

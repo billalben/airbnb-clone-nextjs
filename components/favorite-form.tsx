@@ -1,98 +1,110 @@
 "use client";
 
 import { Heart } from "lucide-react";
-import { useTransition } from "react";
+import Link from "next/link";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-export function AddToFavoriteForm({
+export function FavoriteButton({
   homeId,
   userId,
   pathName,
-  addAction,
+  initialIsFav,
+  toggleAction,
 }: {
   homeId: string;
   userId: string;
   pathName: string;
-  addAction: (formData: FormData) => Promise<unknown>;
+  initialIsFav: boolean;
+  toggleAction: (formData: FormData) => Promise<unknown>;
 }) {
   const [pending, startTransition] = useTransition();
+  const [isFav, setIsFav] = useState(initialIsFav);
+
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const formData = new FormData(e.currentTarget);
+    const wasFav = isFav;
+    setIsFav(!wasFav);
+    startTransition(async () => {
+      try {
+        await toggleAction(formData);
+      } catch (err) {
+        console.error("[toggleFavorite]", err);
+        setIsFav(wasFav);
+        toast.error("Could not update favorites. Please try again.");
+      }
+    });
+  };
+
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        const formData = new FormData(e.currentTarget);
-        startTransition(async () => {
-          try {
-            await addAction(formData);
-            toast.success("Added to favorites");
-          } catch (err) {
-            toast.error(
-              err instanceof Error ? err.message : "Could not add favorite.",
-            );
-          }
-        });
-      }}
+      key={`fav-${homeId}`}
+      onClick={(e) => e.stopPropagation()}
+      onSubmit={onSubmit}
     >
       <input type="hidden" name="homeId" value={homeId} />
       <input type="hidden" name="userId" value={userId} />
       <input type="hidden" name="pathName" value={pathName} />
-      <Button
-        type="submit"
-        variant="outline"
-        size="icon"
+      <HeartButton
+        filled={isFav}
         disabled={pending}
-        className="bg-primary-foreground"
-      >
-        <Heart className="h-4 w-4" />
-      </Button>
+        label={isFav ? "Remove from favorites" : "Add to favorites"}
+      />
     </form>
   );
 }
 
-export function DeleteFromFavoriteForm({
-  favoriteId,
-  userId,
-  pathName,
-  deleteAction,
-}: {
-  favoriteId: string;
-  userId: string;
-  pathName: string;
-  deleteAction: (formData: FormData) => Promise<unknown>;
-}) {
-  const [pending, startTransition] = useTransition();
+export function FavoriteLoginLink() {
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        const formData = new FormData(e.currentTarget);
-        startTransition(async () => {
-          try {
-            await deleteAction(formData);
-            toast.success("Removed from favorites");
-          } catch (err) {
-            toast.error(
-              err instanceof Error
-                ? err.message
-                : "Could not remove favorite.",
-            );
-          }
-        });
-      }}
+    <Link
+      href="/api/auth/login"
+      onClick={(e) => e.stopPropagation()}
+      aria-label="Log in to save"
+      className="group inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/25 transition-all hover:bg-black/40 active:scale-90"
     >
-      <input type="hidden" name="favoriteId" value={favoriteId} />
-      <input type="hidden" name="userId" value={userId} />
-      <input type="hidden" name="pathName" value={pathName} />
-      <Button
-        type="submit"
-        variant="outline"
-        size="icon"
-        disabled={pending}
-        className="bg-primary-foreground"
-      >
-        <Heart className="h-4 w-4 text-primary" fill="#E21C49" />
-      </Button>
-    </form>
+      <Heart
+        className="h-5 w-5 text-white transition-transform group-hover:scale-110"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.25}
+      />
+    </Link>
+  );
+}
+
+function HeartButton({
+  filled,
+  disabled,
+  label,
+}: {
+  filled: boolean;
+  disabled: boolean;
+  label: string;
+}) {
+  return (
+    <button
+      type="submit"
+      onClick={(e) => e.stopPropagation()}
+      disabled={disabled}
+      aria-label={label}
+      aria-pressed={filled}
+      className={cn(
+        "inline-flex h-8 w-8 items-center justify-center rounded-full transition-all hover:scale-110 active:scale-90",
+        "bg-black/25 hover:bg-black/40",
+      )}
+    >
+      <Heart
+        className={cn(
+          "h-5 w-5 transition-colors duration-200",
+          filled ? "text-red-500" : "text-white",
+        )}
+        fill={filled ? "currentColor" : "none"}
+        stroke="currentColor"
+        strokeWidth={2.25}
+      />
+    </button>
   );
 }

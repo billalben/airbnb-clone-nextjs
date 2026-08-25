@@ -2,12 +2,15 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { connection } from "next/server";
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "./lib/db";
 import { canDeleteHome, canEditHome, requireAdmin, requireUser } from "./lib/auth";
 import {
   deleteHomeImages,
   uploadHomeImage,
 } from "./lib/supabase/storage-server";
+import { getImageUrls } from "./lib/supabase/storage";
 import {
   deleteKindeUser,
   kindeManagementEnabled,
@@ -231,27 +234,159 @@ export async function addToFavorite(formData: FormData) {
     throw new Error("Home ID and Path Name are required.");
   }
 
-  await prisma.favorite.create({
-    data: { homeId, userId: user.id },
+  const existing = await prisma.favorite.findFirst({
+    where: { userId: user.id, homeId },
+    select: { id: true },
   });
+  if (!existing) {
+    try {
+      await prisma.favorite.create({
+        data: { homeId, userId: user.id },
+      });
+    } catch (err) {
+      const code =
+        err && typeof err === "object" && "code" in err
+          ? (err as { code?: string }).code
+          : undefined;
+      if (code !== "P2002") throw err;
+    }
+  }
 
   revalidatePath(pathName);
 }
 
 export async function DeleteFromFavorite(formData: FormData) {
   const user = await requireUser();
-  const favoriteId = formData.get("favoriteId") as string;
+  const homeId = formData.get("homeId") as string;
   const pathName = formData.get("pathName") as string;
 
-  if (!favoriteId || !pathName) {
-    throw new Error("Favorite ID and Path Name are required.");
+  if (!homeId || !pathName) {
+    throw new Error("Home ID and Path Name are required.");
   }
 
-  await prisma.favorite.delete({
-    where: { id: favoriteId, userId: user.id },
+  await prisma.favorite.deleteMany({
+    where: { userId: user.id, homeId },
   });
 
   revalidatePath(pathName);
+}
+
+export async function toggleFavorite(formData: FormData) {
+  const user = await requireUser();
+  const homeId = formData.get("homeId") as string;
+  const pathName = formData.get("pathName") as string;
+
+  if (!homeId || !pathName) {
+    throw new Error("Home ID and Path Name are required.");
+  }
+
+  const existing = await prisma.favorite.findFirst({
+    where: { userId: user.id, homeId },
+    select: { id: true },
+  });
+
+  if (existing) {
+    await prisma.favorite.deleteMany({
+      where: { userId: user.id, homeId },
+    });
+  } else {
+    try {
+      await prisma.favorite.create({
+        data: { homeId, userId: user.id },
+      });
+    } catch (err) {
+      const code =
+        err && typeof err === "object" && "code" in err
+          ? (err as { code?: string }).code
+          : undefined;
+      if (code !== "P2002") throw err;
+    }
+  }
+
+  revalidatePath(pathName);
+}
+
+// ---------------- Pagination: load more homes ----------------
+
+export type LoadMoreHomesFilters = {
+  filter?: string;
+  country?: string;
+  guest?: string;
+  room?: string;
+  bathroom?: string;
+};
+
+export type LoadMoreHomeItem = {
+  id: string;
+  title: string | null;
+  price: number | null;
+  description: string | null;
+  country: string | null;
+  imageUrls: (string | null)[];
+  isInFavoriteList: boolean;
+};
+
+export async function loadMoreHomes({
+  skip,
+  filter,
+  country,
+  guest,
+  room,
+  bathroom,
+}: { skip: number } & LoadMoreHomesFilters): Promise<LoadMoreHomeItem[]> {
+  await connection();
+
+  const { getUser } = getKindeServerSession();
+  const user = await getUser();
+
+  const homes = await prisma.home.findMany({
+    where: {
+      addedCategory: true,
+      addedLocation: true,
+      addedDescription: true,
+      categoryName: filter,
+      country,
+      guests: guest,
+      bedrooms: room,
+      bathrooms: bathroom,
+    },
+    orderBy: { createdAT: "desc" },
+    skip,
+    take: 10,
+    select: {
+      id: true,
+      title: true,
+      price: true,
+      description: true,
+      country: true,
+      images: {
+        orderBy: [{ isPrimary: "desc" }, { position: "asc" }],
+        select: { path: true },
+      },
+      Favorite: {
+        where: { userId: user?.id },
+        select: { id: true },
+        take: 1,
+      },
+    },
+  });
+
+  const allPaths = homes.flatMap((h) => h.images.map((i) => i.path));
+  const urls = await getImageUrls(allPaths);
+  let cursor = 0;
+
+  return homes.map((h) => {
+    const homeUrls = h.images.map(() => urls[cursor++] ?? null);
+    return {
+      id: h.id,
+      title: h.title,
+      price: h.price,
+      description: h.description,
+      country: h.country,
+      imageUrls: homeUrls,
+      isInFavoriteList: (h.Favorite[0]?.id ?? null) !== null,
+    };
+  });
 }
 
 // ---------------- Reservations ----------------

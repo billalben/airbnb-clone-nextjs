@@ -50,7 +50,18 @@ export function SelectCalender({
         onSelect={setRange}
         disabled={disabledMatchers}
         captionLayout="dropdown"
-        className="rounded-lg border [--cell-size:--spacing(9)]"
+        navLayout="around"
+        className="w-full rounded-lg border [--cell-size:--spacing(9)]"
+        classNames={{
+          root: "w-full",
+          months: "w-full",
+          month: "w-full grid grid-cols-[auto_1fr_auto] items-center gap-x-2 gap-y-3",
+          button_previous: "size-7 rounded-md justify-self-start",
+          month_caption: "w-full justify-self-center px-0",
+          button_next: "size-7 rounded-md justify-self-end",
+          month_grid: "col-span-3",
+          chevron: "size-4",
+        }}
       />
       {range?.from ? (
         <p className="text-sm text-muted-foreground">

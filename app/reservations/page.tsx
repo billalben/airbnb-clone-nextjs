@@ -1,5 +1,5 @@
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { ListingCard } from "../components/ListingCard";
+import { ListingCardClient } from "../components/ListingCardClient";
 import { NoItems } from "../components/NoItem";
 import prisma from "../lib/db";
 import { redirect } from "next/navigation";
@@ -15,14 +15,14 @@ async function getData(userId: string) {
       Home: {
         select: {
           id: true,
+          title: true,
           country: true,
           description: true,
           price: true,
-          Favorite: { select: { id: true } },
+          Favorite: { select: { id: true }, take: 1 },
           images: {
-            where: { isPrimary: true },
+            orderBy: [{ isPrimary: "desc" }, { position: "asc" }],
             select: { path: true },
-            take: 1,
           },
         },
       },
@@ -37,15 +37,26 @@ export default async function ReservationsRoute() {
   if (!user?.id) return redirect("/");
   const data = await getData(user.id);
 
-  const items = await Promise.all(
-    data.map(async (item) => {
-      const urls = await getImageUrls(item.Home?.images.map((i) => i.path) ?? []);
-      return {
-        ...item,
-        imageUrl: urls[0] ?? null,
-      };
-    }),
+  const allPaths = data.flatMap(
+    (item) => item.Home?.images.map((i) => i.path) ?? [],
   );
+  const urls = await getImageUrls(allPaths);
+  let cursor = 0;
+  const items = data
+    .filter((item) => item.Home != null)
+    .map((item) => {
+      const homeUrls =
+        item.Home?.images.map(() => urls[cursor++] ?? null) ?? [];
+      return {
+        id: item.Home!.id,
+        title: item.Home!.title,
+        country: item.Home!.country,
+        description: item.Home!.description,
+        price: item.Home!.price,
+        imageUrls: homeUrls,
+        isInFavoriteList: (item.Home!.Favorite[0]?.id ?? null) !== null,
+      };
+    });
 
   return (
     <section className="container mx-auto mt-10 px-5 lg:px-10">
@@ -59,21 +70,18 @@ export default async function ReservationsRoute() {
           description="Please add a reservation to see it right here..."
         />
       ) : (
-        <div className="my-8 grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        <div className="my-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {items.map((item) => (
-            <ListingCard
-              key={item.Home?.id}
-              description={item.Home?.description as string}
-              location={item.Home?.country as string}
-              pathName="/favorites"
-              homeId={item.Home?.id as string}
-              imageUrl={item.imageUrl}
-              price={item.Home?.price as number}
+            <ListingCardClient
+              key={item.id}
+              imageUrls={item.imageUrls}
+              title={item.title}
+              location={item.country}
+              pathName="/reservations"
+              homeId={item.id}
+              price={item.price}
               userId={user.id}
-              favoriteId={item.Home?.Favorite[0]?.id}
-              isInFavoriteList={
-                (item.Home?.Favorite.length as number) > 0 ? true : false
-              }
+              isInFavoriteList={item.isInFavoriteList}
             />
           ))}
         </div>

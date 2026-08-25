@@ -70,6 +70,8 @@ model Favorite {
   homeId String?
 
   createAt DateTime @default(now())
+
+  @@unique([userId, homeId])
 }
 
 model Reservation {

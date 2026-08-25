@@ -37,8 +37,8 @@ export function LocationStep({
               </FieldDescription>
               <CountryCombobox
                 id="home-form-country"
-                value={field.value ?? null}
-                onValueChange={(v) => field.onChange(v ?? "")}
+                value={field.value || null}
+                onValueChange={(v) => field.onChange(v ?? field.value)}
                 aria-invalid={fieldState.invalid}
               />
               <FieldError errors={[fieldState.error]} />

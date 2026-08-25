@@ -1,5 +1,6 @@
 import { createReservation } from "@/app/actions";
 import { CategoryShowcase } from "@/app/components/CategoryShowcase";
+import { HomeImageCarousel } from "@/app/components/HomeImageCarousel";
 import { HomeMap } from "@/app/components/HomeMap";
 import { SelectCalender } from "@/app/components/SelectCalender";
 import { ReservationSubmitButton } from "@/app/components/SubmitButtons";
@@ -63,8 +64,6 @@ export default async function HomeRoute({
       url: urls[i] ?? null,
       isPrimary: img.isPrimary,
     })) ?? [];
-  const primaryImage = images[0]?.url;
-  const galleryImages = images.slice(1);
   const country = getCountryByValue(data?.country as string);
   const { getUser } = getKindeServerSession();
   const kindeUser = await getUser();
@@ -73,103 +72,107 @@ export default async function HomeRoute({
   const isOwner = !!dbUser?.id && data?.userId === dbUser.id;
 
   return (
-    <div className="container mx-auto mb-12 mt-10">
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <h1 className="text-2xl font-medium">{data?.title}</h1>
-        {isOwner && (
-          <Button
-            nativeButton={false}
-            render={
-              <Link href={`/my-homes/${data?.id}/edit`}>
-                <Pencil className="mr-1 h-4 w-4" />
-                Edit
-              </Link>
-            }
-            variant="outline"
-            size="sm"
-          />
-        )}
-      </div>
-      <div className="relative h-[420px] md:h-[550px]">
-        {primaryImage ? (
-          <Image
-            alt="Image of Home"
-            src={primaryImage}
-            fill
-            className="h-full w-full rounded-lg object-cover"
-          />
-        ) : (
-          <div className="h-full w-full rounded-lg bg-muted" />
-        )}
-      </div>
+    <div className="container mx-auto mb-16 mt-6 md:mt-10">
+      <div className="grid gap-6 md:grid-cols-[3fr_2fr] md:gap-8 md:items-start">
+        {/* LEFT — sticky on scroll, contains images + description + map */}
+        <div className="md:sticky md:top-20">
+          <HomeImageCarousel images={images} />
 
-      {galleryImages.length > 0 && (
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-          {galleryImages.map((img) =>
-            img.url ? (
-              <div
-                key={img.id}
-                className="relative aspect-square overflow-hidden rounded-md bg-muted"
-              >
-                <Image
-                  src={img.url}
-                  alt="Home gallery"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            ) : null,
-          )}
-        </div>
-      )}
-
-      <div className="relative mt-8 grid gap-12 md:grid-cols-[1fr_332px]">
-        <div>
-          <h3 className="text-xl font-medium">
-            {country?.flag} {country?.label} / {country?.region}
-          </h3>
-          <div className="flex gap-x-2 text-muted-foreground">
-            <p>{data?.guests} Guests</p> * <p>{data?.bedrooms} Bedrooms</p> *{" "}
-            {data?.bathrooms} Bathrooms
+          <div className="mt-5 flex items-start justify-between gap-4">
+            <h1 className="text-2xl font-medium md:text-3xl">{data?.title}</h1>
+            {isOwner && (
+              <Button
+                nativeButton={false}
+                render={
+                  <Link href={`/my-homes/${data?.id}/edit`}>
+                    <Pencil className="mr-1 h-4 w-4" />
+                    Edit
+                  </Link>
+                }
+                variant="outline"
+                size="sm"
+              />
+            )}
           </div>
 
-          <div className="mt-6 flex items-center">
-            <Image
-              src={data?.User?.profileImage ?? "/user.png"}
-              width={44}
-              height={44}
-              alt="User Profile"
-              className="rounded-full"
-            />
-            <div className="ml-4 flex flex-col">
-              <h3 className="font-medium">Hosted by {data?.User?.firstName}</h3>
-              <p className="text-sm text-muted-foreground">Host since 2023</p>
+          <div className="mt-8 space-y-8">
+            <div>
+              <h3 className="text-xl font-medium">
+                {country?.flag} {country?.label} / {country?.region}
+              </h3>
+              <div className="mt-1 flex flex-wrap gap-x-2 text-muted-foreground">
+                <p>{data?.guests} Guests</p>
+                <span aria-hidden>·</span>
+                <p>{data?.bedrooms} Bedrooms</p>
+                <span aria-hidden>·</span>
+                <p>{data?.bathrooms} Bathrooms</p>
+              </div>
+            </div>
+
+            <div className="flex items-center">
+              <Image
+                src={data?.User?.profileImage ?? "/user.png"}
+                width={44}
+                height={44}
+                alt="User Profile"
+                className="rounded-full"
+              />
+              <div className="ml-4 flex flex-col">
+                <h3 className="font-medium">Hosted by {data?.User?.firstName}</h3>
+                <p className="text-sm text-muted-foreground">Host since 2023</p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <CategoryShowcase categoryName={data?.categoryName as string} />
+
+            <Separator />
+
+            <div>
+              <h3 className="mb-2 text-lg font-medium">About this place</h3>
+              <p className="whitespace-pre-line text-muted-foreground">
+                {data?.description}
+              </p>
+            </div>
+
+            <Separator />
+
+            <div>
+              <h3 className="mb-2 text-lg font-medium">Where you&apos;ll be</h3>
+              <HomeMap locationValue={country?.value as string} />
             </div>
           </div>
-
-          <Separator className="my-7" />
-
-          <CategoryShowcase categoryName={data?.categoryName as string} />
-
-          <Separator className="my-7" />
-
-          <p className="text-muted-foreground">{data?.description}</p>
-
-          <Separator className="my-7" />
-
-          <HomeMap locationValue={country?.value as string} />
         </div>
 
-        <form action={createReservation} className="mx-auto">
+        {/* RIGHT — info + reservation calendar */}
+        <form
+          action={createReservation}
+          className="rounded-2xl border bg-card p-6 shadow-sm md:sticky md:top-20"
+        >
           <input type="hidden" name="homeId" value={id} />
+
+          <div className="mb-4 flex items-baseline justify-between">
+            <p className="text-2xl font-semibold">
+              ${data?.price}
+              <span className="text-base font-normal text-muted-foreground">
+                {" "}
+                / night
+              </span>
+            </p>
+          </div>
+
+          <Separator className="mb-4" />
 
           <SelectCalender reservation={data?.Reservation} />
 
           {kindeUser?.id ? (
-            <ReservationSubmitButton />
+            <div className="mt-6">
+              <ReservationSubmitButton />
+            </div>
           ) : (
             <Button
-              className="mx-auto block w-fit"
+              className="mt-6 w-full"
               nativeButton={false}
               render={<Link href="/api/auth/login" />}
             >
