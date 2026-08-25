@@ -1,10 +1,17 @@
 import { notFound } from "next/navigation";
 import prisma from "@/app/lib/db";
 import { canEditHome } from "@/app/lib/auth";
+import { getAllCountries } from "@/app/lib/getCountries";
 import { getImageUrls } from "@/app/lib/supabase/storage";
-import { EditHomeForm } from "@/app/components/EditHomeForm";
-import { HomeImageManager } from "@/app/components/HomeImageManager";
-import { DeleteHomeButton } from "@/app/components/DeleteHomeButton";
+import { HomeFormWizard } from "@/app/components/home-form/HomeFormWizard";
+import { HomePhotosEditor } from "@/app/components/home-form/HomePhotosEditor";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { updateHome, updateHomeImages } from "@/app/actions";
 import { connection } from "next/server";
 
 async function getHome(homeId: string) {
@@ -31,6 +38,11 @@ export default async function EditHomePage({
   const home = await getHome(id);
   if (!home) notFound();
 
+  const countries = getAllCountries().map((country) => ({
+    value: country.value,
+    label: `${country.flag} ${country.label} / ${country.region}`,
+  }));
+
   const imageUrls = await getImageUrls(home.images.map((i) => i.path));
   const images = home.images.map((img, i) => ({
     id: img.id,
@@ -39,36 +51,53 @@ export default async function EditHomePage({
     isPrimary: img.isPrimary,
   }));
 
+  const updateAction = updateHome.bind(null, home.id);
+  const updateImagesAction = updateHomeImages.bind(null, home.id);
+
   return (
-    <div className="container mx-auto mt-10 px-5 lg:px-10">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="container mt-10">
+      <div className="mb-8">
         <h1 className="text-3xl font-semibold tracking-tight">Edit home</h1>
-        <DeleteHomeButton homeId={home.id} variant="destructive" />
+        <p className="mt-2 text-sm text-muted-foreground">
+          Update listing details and manage photos. To delete this home, go to
+          My Listings.
+        </p>
       </div>
 
-      <div className="space-y-10">
-        <section>
-          <h2 className="mb-4 text-xl font-semibold">Details</h2>
-          <EditHomeForm
-            home={{
-              id: home.id,
+      <Tabs defaultValue="details">
+        <TabsList className="w-full">
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="photos">Photos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" keepMounted className="mt-6">
+          <HomeFormWizard
+            mode="edit"
+            defaultValues={{
+              categoryName: home.categoryName,
               title: home.title,
               description: home.description,
               price: home.price,
               guests: home.guests,
               bedrooms: home.bedrooms,
               bathrooms: home.bathrooms,
-              categoryName: home.categoryName,
               country: home.country,
             }}
+            countries={countries}
+            action={updateAction}
           />
-        </section>
+        </TabsContent>
 
-        <section>
-          <h2 className="mb-4 text-xl font-semibold">Photos</h2>
-          <HomeImageManager homeId={home.id} images={images} />
-        </section>
-      </div>
+        <TabsContent value="photos" keepMounted className="my-6">
+          <div>
+            <HomePhotosEditor
+              homeId={home.id}
+              initialImages={images}
+              action={updateImagesAction}
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -12,9 +12,201 @@ import {
   deleteKindeUser,
   kindeManagementEnabled,
 } from "./lib/kinde-management";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  MAX_IMAGE_BYTES,
+  homeEditFormSchema,
+  homeFormSchema,
+} from "./lib/home-schema";
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+type ActionResult =
+  | { ok: true }
+  | { ok: false; fieldErrors?: Record<string, string[]>; message?: string };
+
+function buildFormData(
+  values: Record<string, string | number | File | undefined>,
+) {
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(values)) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === "number") {
+      formData.append(key, String(value));
+    } else {
+      formData.append(key, value);
+    }
+  }
+  return formData;
+}
+
+async function readHomeFormData(formData: FormData, isEdit: boolean) {
+  const schema = isEdit ? homeEditFormSchema : homeFormSchema;
+  const raw = {
+    categoryName: formData.get("categoryName")?.toString() ?? "",
+    title: formData.get("title")?.toString() ?? "",
+    description: formData.get("description")?.toString() ?? "",
+    price: formData.get("price")?.toString() ?? "",
+    image: formData.get("image") as File | undefined,
+    guests: formData.get("guests")?.toString() ?? "",
+    bedrooms: formData.get("bedrooms")?.toString() ?? "",
+    bathrooms: formData.get("bathrooms")?.toString() ?? "",
+    country: formData.get("country")?.toString() ?? "",
+  };
+
+  const result = schema.safeParse(raw);
+  if (!result.success) {
+    const fieldErrors: Record<string, string[]> = {};
+    for (const issue of result.error.issues) {
+      const key = issue.path[0]?.toString() ?? "_";
+      (fieldErrors[key] ??= []).push(issue.message);
+    }
+    return {
+      ok: false as const,
+      fieldErrors,
+      values: null,
+    };
+  }
+
+  return { ok: true as const, values: result.data, formData: raw };
+}
+
+async function finalizeHomeSubmission({
+  values,
+  image,
+  isEdit,
+  existingHomeId,
+}: {
+  values: NonNullable<
+    Awaited<ReturnType<typeof readHomeFormData>>["values"]
+  >;
+  image: File | undefined;
+  isEdit: boolean;
+  existingHomeId?: string;
+}): Promise<ActionResult & { homeId?: string }> {
+  const baseData = {
+    categoryName: values.categoryName,
+    title: values.title,
+    description: values.description,
+    price: values.price,
+    country: values.country,
+    guests: String(values.guests),
+    bedrooms: String(values.bedrooms),
+    bathrooms: String(values.bathrooms),
+    addedCategory: true,
+    addedDescription: true,
+    addedLocation: true,
+  };
+
+  if (isEdit) {
+    if (!existingHomeId) {
+      return { ok: false, message: "Home ID is required." };
+    }
+    const edit = await canEditHome(existingHomeId);
+    if (!edit) {
+      return { ok: false, message: "Not allowed." };
+    }
+
+    if (image && image.size > 0) {
+      const { path } = await uploadHomeImage(existingHomeId, image);
+      const existingCount = await prisma.homeImage.count({
+        where: { homeId: existingHomeId },
+      });
+      await prisma.$transaction([
+        prisma.home.update({
+          where: { id: existingHomeId },
+          data: baseData,
+        }),
+        prisma.homeImage.create({
+          data: {
+            homeId: existingHomeId,
+            path,
+            isPrimary: existingCount === 0,
+            position: existingCount,
+          },
+        }),
+      ]);
+    } else {
+      await prisma.home.update({
+        where: { id: existingHomeId },
+        data: baseData,
+      });
+    }
+
+    revalidatePath("/my-homes");
+    revalidatePath("/admin/homes");
+    revalidatePath(`/my-homes/${existingHomeId}/edit`);
+    revalidatePath(`/home/${existingHomeId}`);
+    revalidatePath("/");
+    return { ok: true, homeId: existingHomeId };
+  }
+
+  // Create flow: image is required by the schema, so it must exist here.
+  if (!image) {
+    return { ok: false, fieldErrors: { image: ["Please choose an image."] } };
+  }
+  const user = await requireUser();
+
+  const created = await prisma.home.create({
+    data: {
+      ...baseData,
+      userId: user.id,
+    },
+  });
+
+  const { path } = await uploadHomeImage(created.id, image);
+  await prisma.homeImage.create({
+    data: {
+      homeId: created.id,
+      path,
+      isPrimary: true,
+      position: 0,
+    },
+  });
+
+  revalidatePath("/");
+  revalidatePath("/my-homes");
+  revalidatePath("/admin/homes");
+  return { ok: true, homeId: created.id };
+}
+
+export async function createHome(
+  values: Record<string, string | number | File | undefined>,
+): Promise<ActionResult> {
+  const formData = buildFormData(values);
+  const parsed = await readHomeFormData(formData, false);
+  if (!parsed.ok) {
+    return { ok: false, fieldErrors: parsed.fieldErrors };
+  }
+  const result = await finalizeHomeSubmission({
+    values: parsed.values,
+    image: parsed.values?.image instanceof File ? parsed.values.image : undefined,
+    isEdit: false,
+  });
+  if (result.ok) {
+    redirect("/");
+  }
+  return result;
+}
+
+export async function updateHome(
+  homeId: string,
+  values: Record<string, string | number | File | undefined>,
+): Promise<ActionResult> {
+  const formData = buildFormData(values);
+  const parsed = await readHomeFormData(formData, true);
+  if (!parsed.ok) {
+    return { ok: false, fieldErrors: parsed.fieldErrors };
+  }
+  const result = await finalizeHomeSubmission({
+    values: parsed.values,
+    image: parsed.values?.image instanceof File ? parsed.values.image : undefined,
+    isEdit: true,
+    existingHomeId: homeId,
+  });
+  if (result.ok) {
+    redirect(`/my-homes/${homeId}/edit?success=1`);
+  }
+  return result;
+}
 
 function validateImage(file: File) {
   if (!file || file.size === 0) {
@@ -28,144 +220,7 @@ function validateImage(file: File) {
   }
 }
 
-export async function createAirbnbHome({ userId }: { userId: string }) {
-  if (!userId) throw new Error("User ID is required.");
-
-  const existingHome = await prisma.home.findFirst({
-    where: {
-      userId,
-    },
-    orderBy: {
-      createdAT: "desc",
-    },
-  });
-
-  if (!existingHome) {
-    const data = await prisma.home.create({
-      data: {
-        userId,
-      },
-    });
-
-    return redirect(`/create/${data.id}/structure`);
-  }
-
-  if (!existingHome.addedCategory) {
-    return redirect(`/create/${existingHome.id}/structure`);
-  } else if (!existingHome.addedDescription) {
-    return redirect(`/create/${existingHome.id}/description`);
-  } else if (!existingHome.addedLocation) {
-    return redirect(`/create/${existingHome.id}/address`);
-  }
-
-  const data = await prisma.home.create({
-    data: {
-      userId,
-    },
-  });
-
-  return redirect(`/create/${data.id}/structure`);
-}
-
-export async function createCategoryPage(formData: FormData) {
-  const categoryName = formData.get("categoryName") as string;
-  const homeId = formData.get("homeId") as string;
-
-  if (!categoryName || !homeId) {
-    throw new Error("Category name and home ID are required.");
-  }
-
-  const edit = await canEditHome(homeId);
-  if (!edit) throw new Error("Not allowed.");
-
-  await prisma.home.update({
-    where: {
-      id: homeId,
-    },
-    data: {
-      categoryName: categoryName,
-      addedCategory: true,
-    },
-  });
-
-  return redirect(`/create/${homeId}/description`);
-}
-
-export async function CreateDescription(formData: FormData) {
-  const title = formData.get("title") as string;
-  const description = formData.get("description") as string;
-  const price = formData.get("price");
-  const imageFile = formData.get("image") as File;
-  const homeId = formData.get("homeId") as string;
-
-  const guestNumber = formData.get("guest") as string;
-  const roomNumber = formData.get("room") as string;
-  const bathroomsNumber = formData.get("bathroom") as string;
-
-  if (
-    !title ||
-    !description ||
-    !price ||
-    !imageFile ||
-    !homeId ||
-    !guestNumber ||
-    !roomNumber ||
-    !bathroomsNumber
-  ) {
-    throw new Error("All fields are required.");
-  }
-
-  validateImage(imageFile);
-
-  const edit = await canEditHome(homeId);
-  if (!edit) throw new Error("Not allowed.");
-
-  const { path } = await uploadHomeImage(homeId, imageFile);
-
-  await prisma.$transaction([
-    prisma.homeImage.create({
-      data: {
-        homeId,
-        path,
-        isPrimary: true,
-        position: 0,
-      },
-    }),
-    prisma.home.update({
-      where: { id: homeId },
-      data: {
-        title,
-        description,
-        price: Number(price),
-        bedrooms: roomNumber,
-        bathrooms: bathroomsNumber,
-        guests: guestNumber,
-        addedDescription: true,
-      },
-    }),
-  ]);
-
-  return redirect(`/create/${homeId}/address`);
-}
-
-export async function createLocation(formData: FormData) {
-  const homeId = formData.get("homeId") as string;
-  const countryValue = formData.get("countryValue") as string;
-
-  if (!homeId || !countryValue) {
-    throw new Error("Home ID and country are required.");
-  }
-
-  const edit = await canEditHome(homeId);
-  if (!edit) throw new Error("Not allowed.");
-
-  await prisma.home.update({
-    where: { id: homeId },
-    data: { addedLocation: true, country: countryValue },
-  });
-
-  return redirect("/");
-}
+// ---------------- Favorites ----------------
 
 export async function addToFavorite(formData: FormData) {
   const user = await requireUser();
@@ -199,6 +254,8 @@ export async function DeleteFromFavorite(formData: FormData) {
   revalidatePath(pathName);
 }
 
+// ---------------- Reservations ----------------
+
 export async function createReservation(formData: FormData) {
   const user = await requireUser();
   const homeId = formData.get("homeId") as string;
@@ -221,65 +278,7 @@ export async function createReservation(formData: FormData) {
   return redirect("/");
 }
 
-// ---------------- Edit / Delete home (owner or admin) ----------------
-
-export async function updateHome(formData: FormData) {
-  const homeId = formData.get("homeId") as string;
-  if (!homeId) throw new Error("Home ID is required.");
-
-  const edit = await canEditHome(homeId);
-  if (!edit) throw new Error("Not allowed.");
-
-  const title = (formData.get("title") as string)?.trim();
-  const description = (formData.get("description") as string)?.trim();
-  const priceRaw = formData.get("price") as string;
-  const categoryName = (formData.get("categoryName") as string)?.trim();
-  const country = (formData.get("country") as string)?.trim();
-  const guests = formData.get("guest") as string;
-  const bedrooms = formData.get("room") as string;
-  const bathrooms = formData.get("bathroom") as string;
-
-  if (
-    !title ||
-    !description ||
-    !priceRaw ||
-    !categoryName ||
-    !country ||
-    !guests ||
-    !bedrooms ||
-    !bathrooms
-  ) {
-    throw new Error("All fields are required.");
-  }
-
-  const price = Number(priceRaw);
-  if (!Number.isFinite(price) || price < 10) {
-    throw new Error("Price must be at least 10.");
-  }
-
-  await prisma.home.update({
-    where: { id: homeId },
-    data: {
-      title,
-      description,
-      price,
-      categoryName,
-      country,
-      guests,
-      bedrooms,
-      bathrooms,
-      addedCategory: true,
-      addedDescription: true,
-      addedLocation: true,
-    },
-  });
-
-  revalidatePath("/my-homes");
-  revalidatePath("/admin/homes");
-  revalidatePath(`/home/${homeId}`);
-  revalidatePath("/");
-  redirect(`/my-homes/${homeId}/edit?success=1`);
-}
+// ---------------- Delete home ----------------
 
 export async function deleteHome(formData: FormData) {
   const homeId = formData.get("homeId") as string;
@@ -296,8 +295,6 @@ export async function deleteHome(formData: FormData) {
 
   await prisma.home.delete({ where: { id: homeId } });
 
-  // Delete storage objects after DB row is gone.
-  // A failure here will leave orphaned files but won't leave orphaned DB rows.
   try {
     await deleteHomeImages(paths);
   } catch (err) {
@@ -310,37 +307,101 @@ export async function deleteHome(formData: FormData) {
   redirect("/my-homes");
 }
 
-// ---------------- Home images (owner or admin) ----------------
+// ---------------- Home images (owner only) ----------------
 
-export async function addHomeImage(formData: FormData) {
-  const homeId = formData.get("homeId") as string;
-  if (!homeId) throw new Error("Home ID is required.");
-
+export async function updateHomeImages(
+  homeId: string,
+  payload: {
+    newImageFiles: File[];
+    deleteImageIds: string[];
+    primaryImageKey: string | null;
+  },
+): Promise<ActionResult> {
   const edit = await canEditHome(homeId);
-  if (!edit) throw new Error("Not allowed.");
+  if (!edit) {
+    return { ok: false, message: "Not allowed." };
+  }
 
-  const file = formData.get("image") as File;
-  validateImage(file);
+  const { newImageFiles, deleteImageIds, primaryImageKey } = payload;
 
-  const { path } = await uploadHomeImage(homeId, file);
+  for (const file of newImageFiles) {
+    validateImage(file);
+  }
 
-  // First image becomes primary
-  const existingCount = await prisma.homeImage.count({ where: { homeId } });
-
-  await prisma.homeImage.create({
-    data: {
-      homeId,
-      path,
-      isPrimary: existingCount === 0,
-      position: existingCount,
-    },
+  const existingImages = await prisma.homeImage.findMany({
+    where: { homeId },
+    select: { id: true, path: true, isPrimary: true, position: true },
   });
+
+  const validDeleteIds = new Set(
+    existingImages
+      .filter((img) => deleteImageIds.includes(img.id))
+      .map((img) => img.id),
+  );
+
+  const deletions = existingImages.filter((img) => validDeleteIds.has(img.id));
+
+  const uploadedRows: { id: string }[] = [];
+  if (newImageFiles.length > 0) {
+    const basePosition = await prisma.homeImage.count({ where: { homeId } });
+    for (const [index, file] of newImageFiles.entries()) {
+      const { path } = await uploadHomeImage(homeId, file);
+      const created = await prisma.homeImage.create({
+        data: {
+          homeId,
+          path,
+          isPrimary: false,
+          position: basePosition + index,
+        },
+        select: { id: true },
+      });
+      uploadedRows.push(created);
+    }
+  }
+
+  let primaryImageId: string | null = null;
+  if (primaryImageKey) {
+    if (primaryImageKey.startsWith("new-")) {
+      const index = Number(primaryImageKey.slice(4));
+      if (Number.isInteger(index) && index >= 0 && index < uploadedRows.length) {
+        primaryImageId = uploadedRows[index].id;
+      }
+    } else if (validDeleteIds.has(primaryImageKey) === false) {
+      const exists = existingImages.some((img) => img.id === primaryImageKey);
+      if (exists) primaryImageId = primaryImageKey;
+    }
+  }
+
+  if (primaryImageId) {
+    await prisma.$transaction([
+      prisma.homeImage.updateMany({
+        where: { homeId },
+        data: { isPrimary: false },
+      }),
+      prisma.homeImage.update({
+        where: { id: primaryImageId },
+        data: { isPrimary: true },
+      }),
+    ]);
+  }
+
+  if (deletions.length > 0) {
+    await prisma.homeImage.deleteMany({
+      where: { id: { in: deletions.map((img) => img.id) } },
+    });
+    try {
+      await deleteHomeImages(deletions.map((img) => img.path));
+    } catch (err) {
+      console.error("Failed to delete some images from storage:", err);
+    }
+  }
 
   revalidatePath("/my-homes");
   revalidatePath("/admin/homes");
   revalidatePath(`/my-homes/${homeId}/edit`);
   revalidatePath(`/home/${homeId}`);
   revalidatePath("/");
+  return { ok: true };
 }
 
 export async function deleteHomeImage(formData: FormData) {
@@ -361,7 +422,6 @@ export async function deleteHomeImage(formData: FormData) {
 
   await prisma.homeImage.delete({ where: { id: imageId } });
 
-  // If we deleted the primary, promote the next image (by position) to primary.
   if (image.isPrimary) {
     const next = await prisma.homeImage.findFirst({
       where: { homeId },
@@ -444,14 +504,8 @@ export async function deleteUser(formData: FormData) {
   if (!userId) throw new Error("User ID is required.");
   if (userId === admin.id) throw new Error("You cannot delete yourself.");
 
-  // 1. Snapshot storage paths BEFORE the DB cascade removes the HomeImage rows.
   const paths = await collectUserHomeImagePaths(userId);
 
-  // 2. Delete from Kinde first. Failure here aborts everything — we never
-  //    want to delete from the local DB while leaving an orphan in Kinde.
-  //    If M2M creds aren't configured we still proceed locally so admins
-  //    aren't blocked, but log a warning so the Kinde account doesn't get
-  //    forgotten.
   if (kindeManagementEnabled()) {
     try {
       await deleteKindeUser(userId);
@@ -469,14 +523,9 @@ export async function deleteUser(formData: FormData) {
     );
   }
 
-  // 3. Local DB. deleteMany (not delete) so a re-run after a Kinde 404
-  //    doesn't throw P2025. Cascade handles favorites / reservations /
-  //    HomeImage rows.
   const result = await prisma.user.deleteMany({ where: { id: userId } });
   if (result.count === 0) return;
 
-  // 4. Best-effort storage cleanup. A failure here only leaves orphaned
-  //    files in the bucket, never orphaned DB rows.
   if (paths.length > 0) {
     try {
       await deleteHomeImages(paths);
@@ -485,7 +534,6 @@ export async function deleteUser(formData: FormData) {
     }
   }
 
-  // 5. Revalidate every route that could have surfaced this user's data.
   revalidatePath("/admin/users");
   revalidatePath("/admin/homes");
   revalidatePath("/admin/reservations");
