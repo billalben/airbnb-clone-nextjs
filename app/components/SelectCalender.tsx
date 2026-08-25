@@ -1,13 +1,10 @@
 "use client";
 
-import "react-date-range/dist/styles.css"; // main css file
-import "react-date-range/dist/theme/default.css"; // theme css file
+import { useMemo, useState } from "react";
+import type { DateRange, Matcher } from "react-day-picker";
+import { Calendar } from "@/components/ui/calendar";
 
-import { DateRange } from "react-date-range";
-import { useState } from "react";
-import { eachDayOfInterval } from "date-fns";
-
-type TypeReservation = {
+type Reservation = {
   startDate: Date;
   endDate: Date;
 };
@@ -15,49 +12,64 @@ type TypeReservation = {
 export function SelectCalender({
   reservation,
 }: {
-  reservation: TypeReservation[] | undefined;
+  reservation: Reservation[] | undefined;
 }) {
-  const [state, setState] = useState([
-    {
-      startDate: new Date(),
-      endDate: new Date(),
-      key: "selection",
-    },
-  ]);
+  const [range, setRange] = useState<DateRange | undefined>(undefined);
 
-  let disabledDates: Date[] = [];
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
 
-  reservation?.forEach((reservationItem) => {
-    const dateRange = eachDayOfInterval({
-      start: new Date(reservationItem.startDate),
-      end: new Date(reservationItem.endDate),
-    });
+  const disabledMatchers = useMemo<Matcher[]>(() => {
+    const reserved: Matcher[] = [];
+    for (const r of reservation ?? []) {
+      const start = new Date(r.startDate);
+      const end = new Date(r.endDate);
+      if (start.getTime() === end.getTime()) {
+        reserved.push(start);
+      } else {
+        reserved.push({ from: start, to: end });
+      }
+    }
+    return [{ before: today }, ...reserved];
+  }, [reservation, today]);
 
-    disabledDates = [...disabledDates, ...dateRange];
-  });
+  const startValue = range?.from?.toISOString() ?? "";
+  const endValue = (range?.to ?? range?.from)?.toISOString() ?? "";
 
   return (
-    <>
-      <input
-        type="hidden"
-        name="startDate"
-        value={state[0].startDate.toISOString()}
+    <div className="flex flex-col gap-2">
+      <input type="hidden" name="startDate" value={startValue} />
+      <input type="hidden" name="endDate" value={endValue} />
+      <Calendar
+        mode="range"
+        numberOfMonths={1}
+        selected={range}
+        onSelect={setRange}
+        disabled={disabledMatchers}
+        captionLayout="dropdown"
+        navLayout="around"
+        className="w-full rounded-lg border [--cell-size:--spacing(9)]"
+        classNames={{
+          root: "w-full",
+          months: "w-full",
+          month: "w-full grid grid-cols-[auto_1fr_auto] items-center gap-x-2 gap-y-3",
+          button_previous: "size-7 rounded-md justify-self-start",
+          month_caption: "w-full justify-self-center px-0",
+          button_next: "size-7 rounded-md justify-self-end",
+          month_grid: "col-span-3",
+          chevron: "size-4",
+        }}
       />
-      <input
-        type="hidden"
-        name="endDate"
-        value={state[0].endDate.toISOString()}
-      />
-      <DateRange
-        date={new Date()}
-        showDateDisplay={false}
-        rangeColors={["#FF5A5F"]}
-        ranges={state}
-        onChange={(item) => setState([item.selection] as any)}
-        minDate={new Date()}
-        direction="vertical"
-        disabledDates={disabledDates}
-      />
-    </>
+      {range?.from ? (
+        <p className="text-sm text-muted-foreground">
+          {range.to
+            ? `${range.from.toLocaleDateString()} → ${range.to.toLocaleDateString()}`
+            : `Check-in: ${range.from.toLocaleDateString()} (pick a check-out date)`}
+        </p>
+      ) : null}
+    </div>
   );
 }

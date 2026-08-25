@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import { categoryItems } from "../lib/categoryItems";
-import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 
 export function MapFilterItems() {
   const searchParams = useSearchParams();
@@ -22,33 +28,45 @@ export function MapFilterItems() {
   );
 
   const renderedItems = useMemo(() => {
-    return categoryItems.map(({ id, name, imageUrl, title }) => (
-      <Link
-        key={id}
-        href={`${pathname}?${createQueryString("filter", name)}`}
-        className={cn(
-          "min-w-32 space-y-3 border-b-2 border-transparent py-2",
-          search === name ? "border-black" : "opacity-60",
-          "transition-all hover:bg-slate-200 hover:opacity-100",
-        )}
-      >
-        <div className="relative mx-auto h-6 w-6">
-          <Image
-            src={imageUrl}
-            alt={`${title} category image`}
-            className="h-6 w-6"
-            width={24}
-            height={24}
-          />
-        </div>
-        <p className="text-center text-xs font-medium">{title}</p>
-      </Link>
-    ));
+    return categoryItems.map(({ id, name, icon: Icon, title }) => {
+      const isActive = search === name;
+      const href = isActive
+        ? pathname
+        : `${pathname}?${createQueryString("filter", name)}`;
+
+      return (
+        <CarouselItem
+          key={id}
+          className="basis-1/3 sm:basis-1/4 md:basis-1/6 lg:basis-1/8"
+        >
+          <Link
+            href={href}
+            aria-pressed={isActive}
+            className={cn(
+              "flex h-full flex-col items-center justify-center gap-2 border-b-2 border-transparent px-2 py-2",
+              isActive ? "border-foreground opacity-100" : "opacity-60",
+              "transition-all hover:bg-muted hover:opacity-100",
+            )}
+          >
+            <Icon className="h-6 w-6" />
+            <p className="text-center text-xs font-medium">{title}</p>
+          </Link>
+        </CarouselItem>
+      );
+    });
   }, [createQueryString, search, pathname]);
 
   return (
-    <div className="no-scrollbar mt-2 flex w-full items-center overflow-x-scroll">
-      {renderedItems}
-    </div>
+    <Carousel
+      opts={{ align: "start", loop: false }}
+      className="mt-2 w-full"
+    >
+      <CarouselContent className="-ml-2">
+        {renderedItems}
+      </CarouselContent>
+      <CarouselPrevious className="left-0 bg-background/90 shadow-md disabled:hidden" />
+      <CarouselNext className="right-0 bg-background/90 shadow-md disabled:hidden" />
+    </Carousel>
   );
 }
+

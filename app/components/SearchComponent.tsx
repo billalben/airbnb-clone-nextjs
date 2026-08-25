@@ -9,45 +9,71 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
-import { Search } from "lucide-react";
+import { ArrowLeft, Bath, Bed, Globe, Search, Users, X } from "lucide-react";
 import { useState } from "react";
-import { getAllCountries } from "../lib/getCountries";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { getCountryByValue } from "../lib/getCountries";
 import { Button } from "@/components/ui/button";
 import { CreationSubmit } from "./SubmitButtons";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Counter } from "./Counter";
+import { CountryCombobox } from "./CountryCombobox";
 
 export function SearchModalComponent() {
   const [step, setStep] = useState(1);
   const [locationValue, setLocationValue] = useState("");
-  const countries = getAllCountries().map((country) => ({
-    value: country.value,
-    label: `${country.flag} ${country.label} / ${country.region}`,
-  }));
+
+  const searchParams = useSearchParams();
+  const countryParam = searchParams.get("country");
+  const guestParam = searchParams.get("guest");
+  const roomParam = searchParams.get("room");
+  const bathroomParam = searchParams.get("bathroom");
+  const hasFilter = Boolean(
+    countryParam || guestParam || roomParam || bathroomParam,
+  );
+  const country = countryParam ? getCountryByValue(countryParam) : null;
 
   return (
     <Dialog>
-      <DialogTrigger className="flex cursor-pointer items-center rounded-full border px-5 py-2">
-        <div className="flex h-full divide-x font-medium">
-          <p className="hidden px-4 sm:block">Anywhere</p>
-          <p className="hidden px-4 sm:block">Any Week</p>
-          <p className="hidden px-4 sm:block">Add Guests</p>
+      <DialogTrigger className="group flex cursor-pointer items-center gap-1 rounded-full border border-border/60 bg-background px-2 py-2 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-md lg:px-4 lg:py-2">
+        <div className="flex h-full items-center divide-x divide-border/60 font-medium">
+          <div className="flex items-center gap-1.5 px-4">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            {country ? (
+              <span className="max-w-32 truncate">
+                {country.flag} {country.label}
+              </span>
+            ) : null}
+          </div>
+          <div className="hidden items-center gap-1.5 px-4 sm:flex">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            {guestParam ? <span>{guestParam}</span> : null}
+          </div>
+          <div className="hidden items-center gap-1.5 px-4 sm:flex">
+            <Bed className="h-4 w-4 text-muted-foreground" />
+            {roomParam ? <span>{roomParam}</span> : null}
+          </div>
+          <div className="hidden items-center gap-1.5 px-4 sm:flex">
+            <Bath className="h-4 w-4 text-muted-foreground" />
+            {bathroomParam ? <span>{bathroomParam}</span> : null}
+          </div>
         </div>
 
-        <Search className="h-8 w-8 rounded-full bg-primary p-2 text-white" />
+        {hasFilter ? (
+          <Link
+            href="/"
+            onClick={(e) => e.stopPropagation()}
+            className="ml-1 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Clear all filters"
+          >
+            <X className="h-4 w-4" />
+          </Link>
+        ) : null}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <form className="flex flex-col gap-4">
+      <DialogContent className="sm:max-w-106.25">
+        <form action="/" method="get" className="flex flex-col gap-4">
           <input type="hidden" name="country" value={locationValue} />
           {step === 1 ? (
             <>
@@ -58,26 +84,11 @@ export function SearchModalComponent() {
                 </DialogDescription>
               </DialogHeader>
 
-              <Select
-                required
-                items={countries}
-                onValueChange={(value) => setLocationValue(value as string)}
+              <CountryCombobox
                 value={locationValue}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a Country" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Countries</SelectLabel>
-                    {countries.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+                onValueChange={(v) => setLocationValue(v ?? "")}
+                placeholder="Select a Country"
+              />
             </>
           ) : (
             <>
@@ -125,14 +136,32 @@ export function SearchModalComponent() {
             </>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:justify-between">
+            {step === 2 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={() => setStep(1)}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+            ) : (
+              <span />
+            )}
             {step === 1 ? (
-              <Button onClick={() => setStep((prev) => prev + 1)} type="button">
+              <Button
+                onClick={() => setStep(2)}
+                type="button"
+                size="lg"
+                disabled={!locationValue}
+              >
                 Next
               </Button>
-            ) : step === 2 ? (
-              <CreationSubmit />
-            ) : null}
+            ) : (
+              <CreationSubmit label="Search" icon={Search} />
+            )}
           </DialogFooter>
         </form>
       </DialogContent>
