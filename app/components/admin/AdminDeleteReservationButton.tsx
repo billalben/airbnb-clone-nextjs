@@ -1,8 +1,9 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Trash2, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useTransition } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { deleteReservation } from "../../actions";
 
 export function AdminDeleteReservationButton({
@@ -10,28 +11,37 @@ export function AdminDeleteReservationButton({
 }: {
   reservationId: string;
 }) {
-  const [busy, setBusy] = useState(false);
+  const [pending, startTransition] = useTransition();
   return (
-    <form
-      action={async (fd) => {
+    <Button
+      type="button"
+      variant="destructive"
+      size="xs"
+      disabled={pending}
+      onClick={() => {
         if (!confirm("Delete this reservation?")) return;
-        setBusy(true);
-        try {
-          await deleteReservation(fd);
-        } finally {
-          setBusy(false);
-        }
+        const formData = new FormData();
+        formData.set("reservationId", reservationId);
+        startTransition(async () => {
+          try {
+            await deleteReservation(formData);
+            toast.success("Reservation deleted");
+          } catch (err) {
+            toast.error(
+              err instanceof Error
+                ? err.message
+                : "Could not delete reservation.",
+            );
+          }
+        });
       }}
     >
-      <input type="hidden" name="reservationId" value={reservationId} />
-      <Button type="submit" variant="destructive" size="xs" disabled={busy}>
-        {busy ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
-        ) : (
-          <Trash2 className="h-3 w-3" />
-        )}
-        Delete
-      </Button>
-    </form>
+      {pending ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : (
+        <Trash2 className="h-3 w-3" />
+      )}
+      Delete
+    </Button>
   );
 }

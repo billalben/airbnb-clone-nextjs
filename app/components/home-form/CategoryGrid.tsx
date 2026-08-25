@@ -52,8 +52,8 @@ function CategoryCard({
       className={cn(
         "block cursor-pointer rounded-xl border-2 transition-colors",
         selected
-          ? "border-primary bg-gradient-to-r from-red-200 to-zinc-100"
-          : "border-transparent hover:border-muted",
+          ? "border-primary bg-primary/10"
+          : "border-transparent hover:border-muted hover:bg-muted/40",
       )}
     >
       <input

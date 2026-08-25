@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,7 +27,21 @@ export function DeleteHomeButton({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [pending, startTransition] = useTransition();
+
+  const onConfirm = () => {
+    const formData = new FormData();
+    formData.set("homeId", homeId);
+    startTransition(async () => {
+      try {
+        await deleteHome(formData);
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Could not delete home.",
+        );
+      }
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -56,30 +71,23 @@ export function DeleteHomeButton({
             type="button"
             variant="outline"
             onClick={() => setOpen(false)}
+            disabled={pending}
           >
             Cancel
           </Button>
-          <form
-            action={async (fd) => {
-              setPending(true);
-              try {
-                await deleteHome(fd);
-                setOpen(false);
-              } finally {
-                setPending(false);
-              }
-            }}
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={pending}
+            onClick={onConfirm}
           >
-            <input type="hidden" name="homeId" value={homeId} />
-            <Button type="submit" variant="destructive" disabled={pending}>
-              {pending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="mr-1 h-4 w-4" />
-              )}
-              Delete home
-            </Button>
-          </form>
+            {pending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="mr-1 h-4 w-4" />
+            )}
+            Delete home
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

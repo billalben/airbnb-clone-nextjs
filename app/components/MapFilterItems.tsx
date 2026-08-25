@@ -45,7 +45,7 @@ export function MapFilterItems() {
             className={cn(
               "flex h-full flex-col items-center justify-center gap-2 border-b-2 border-transparent px-2 py-2",
               isActive ? "border-foreground opacity-100" : "opacity-60",
-              "transition-all hover:bg-slate-200 hover:opacity-100",
+              "transition-all hover:bg-muted hover:opacity-100",
             )}
           >
             <Icon className="h-6 w-6" />

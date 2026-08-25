@@ -21,7 +21,7 @@ export function CategorySelect({ defaultValue }: { defaultValue?: string }) {
             aria-pressed={selected === item.name}
           >
             <Card
-              className={`border-2 ${selected === item.name ? "border-primary bg-linear-to-r from-red-200 to-zinc-100" : ""}`}
+              className={`border-2 ${selected === item.name ? "border-primary bg-primary/10" : ""}`}
               onClick={() => setSelected(item.name)}
             >
               <CardHeader>

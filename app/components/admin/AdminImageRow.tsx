@@ -2,9 +2,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Loader2, Star, Trash2 } from "lucide-react";
-import { useState } from "react";
-import { deleteHomeImage, setPrimaryImage } from "../../actions";
+import { useTransition } from "react";
+import { toast } from "sonner";
 import Image from "next/image";
+import { deleteHomeImage, setPrimaryImage } from "../../actions";
 
 export function AdminImageRow({
   homeId,
@@ -17,7 +18,40 @@ export function AdminImageRow({
   isPrimary: boolean;
   url: string;
 }) {
-  const [busy, setBusy] = useState<"primary" | "delete" | null>(null);
+  const [busy, startTransition] = useTransition();
+  const busyKind = busy ? "working" : null;
+
+  const runSetPrimary = () => {
+    const formData = new FormData();
+    formData.set("homeId", homeId);
+    formData.set("imageId", imageId);
+    startTransition(async () => {
+      try {
+        await setPrimaryImage(formData);
+        toast.success("Primary photo updated");
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Could not update primary photo.",
+        );
+      }
+    });
+  };
+
+  const runDelete = () => {
+    const formData = new FormData();
+    formData.set("homeId", homeId);
+    formData.set("imageId", imageId);
+    startTransition(async () => {
+      try {
+        await deleteHomeImage(formData);
+        toast.success("Photo removed");
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Could not delete photo.",
+        );
+      }
+    });
+  };
 
   return (
     <div className="flex items-center gap-2">
@@ -34,58 +68,34 @@ export function AdminImageRow({
           <Star className="h-3 w-3" /> Primary
         </span>
       ) : (
-        <form
-          action={async (fd) => {
-            setBusy("primary");
-            try {
-              await setPrimaryImage(fd);
-            } finally {
-              setBusy(null);
-            }
-          }}
-        >
-          <input type="hidden" name="homeId" value={homeId} />
-          <input type="hidden" name="imageId" value={imageId} />
-          <Button
-            size="xs"
-            variant="outline"
-            type="submit"
-            disabled={busy !== null}
-          >
-            {busy === "primary" ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <Star className="h-3 w-3" />
-            )}
-            Set primary
-          </Button>
-        </form>
-      )}
-      <form
-        action={async (fd) => {
-          setBusy("delete");
-          try {
-            await deleteHomeImage(fd);
-          } finally {
-            setBusy(null);
-          }
-        }}
-      >
-        <input type="hidden" name="homeId" value={homeId} />
-        <input type="hidden" name="imageId" value={imageId} />
         <Button
+          type="button"
           size="xs"
-          variant="destructive"
-          type="submit"
-          disabled={busy !== null}
+          variant="outline"
+          disabled={busy}
+          onClick={runSetPrimary}
         >
-          {busy === "delete" ? (
+          {busyKind === "working" ? (
             <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
-            <Trash2 className="h-3 w-3" />
+            <Star className="h-3 w-3" />
           )}
+          Set primary
         </Button>
-      </form>
+      )}
+      <Button
+        type="button"
+        size="xs"
+        variant="destructive"
+        disabled={busy}
+        onClick={runDelete}
+      >
+        {busyKind === "working" ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <Trash2 className="h-3 w-3" />
+        )}
+      </Button>
     </div>
   );
 }

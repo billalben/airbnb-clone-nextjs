@@ -26,6 +26,7 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import Link from "next/link";
 import Image from "next/image";
 import { getCurrentUser } from "../lib/auth";
+import { ModeToggle } from "@/components/mode-toggle";
 
 function getFullName(
   user:
@@ -76,6 +77,8 @@ export async function UserNav() {
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-50">
+        <ModeToggle />
+        <DropdownMenuSeparator />
         {user ? (
           <>
             <div className="px-2 py-1.5 select-none">

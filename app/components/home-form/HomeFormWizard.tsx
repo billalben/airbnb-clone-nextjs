@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   homeEditFormSchema,
@@ -128,9 +129,10 @@ export function HomeFormWizard({
               });
             }
           }
-          setServerError(
-            result.message ?? "Please review the highlighted fields and try again.",
-          );
+          const message =
+            result.message ?? "Please review the highlighted fields and try again.";
+          setServerError(message);
+          toast.error(message);
         }
       });
     },

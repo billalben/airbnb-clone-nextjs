@@ -182,7 +182,7 @@ export async function createHome(
     isEdit: false,
   });
   if (result.ok) {
-    redirect("/");
+    redirect("/?toast=home_created");
   }
   return result;
 }
@@ -203,7 +203,7 @@ export async function updateHome(
     existingHomeId: homeId,
   });
   if (result.ok) {
-    redirect(`/my-homes/${homeId}/edit?success=1`);
+    redirect(`/my-homes/${homeId}/edit?toast=home_updated`);
   }
   return result;
 }
@@ -275,7 +275,7 @@ export async function createReservation(formData: FormData) {
     },
   });
 
-  return redirect("/");
+  return redirect("/?toast=reservation_created");
 }
 
 // ---------------- Delete home ----------------
@@ -304,7 +304,7 @@ export async function deleteHome(formData: FormData) {
   revalidatePath("/my-homes");
   revalidatePath("/admin/homes");
   revalidatePath("/");
-  redirect("/my-homes");
+  redirect("/my-homes?toast=home_deleted");
 }
 
 // ---------------- Home images (owner only) ----------------

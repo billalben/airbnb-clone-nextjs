@@ -78,6 +78,7 @@ export default async function HomeRoute({
         <h1 className="text-2xl font-medium">{data?.title}</h1>
         {isOwner && (
           <Button
+            nativeButton={false}
             render={
               <Link href={`/my-homes/${data?.id}/edit`}>
                 <Pencil className="mr-1 h-4 w-4" />

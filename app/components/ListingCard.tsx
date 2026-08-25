@@ -1,7 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCountries } from "../lib/getCountries";
-import { AddToFavoriteButton, DeleteFromFavoriteButton } from "./SubmitButtons";
+import {
+  AddToFavoriteForm,
+  DeleteFromFavoriteForm,
+} from "@/components/favorite-form";
 import { DeleteFromFavorite, addToFavorite } from "../actions";
 
 interface iAppProps {
@@ -49,19 +52,19 @@ export function ListingCard({
         {userId && favoriteId !== undefined && (
           <div className="absolute right-2 top-2 z-10">
             {isInFavoriteList && favoriteId ? (
-              <form action={DeleteFromFavorite}>
-                <input type="hidden" name="favoriteId" value={favoriteId} />
-                <input type="hidden" name="userId" value={userId} />
-                <input type="hidden" name="pathName" value={pathName} />
-                <DeleteFromFavoriteButton />
-              </form>
+              <DeleteFromFavoriteForm
+                favoriteId={favoriteId}
+                userId={userId}
+                pathName={pathName}
+                deleteAction={DeleteFromFavorite}
+              />
             ) : (
-              <form action={addToFavorite}>
-                <input type="hidden" name="homeId" value={homeId} />
-                <input type="hidden" name="userId" value={userId} />
-                <input type="hidden" name="pathName" value={pathName} />
-                <AddToFavoriteButton />
-              </form>
+              <AddToFavoriteForm
+                homeId={homeId}
+                userId={userId}
+                pathName={pathName}
+                addAction={addToFavorite}
+              />
             )}
           </div>
         )}
@@ -78,7 +81,7 @@ export function ListingCard({
           {description}
         </p>
         <p className="pt-2 text-muted-foreground">
-          <span className="font-medium text-black">${price}</span> Night
+          <span className="font-medium text-foreground">${price}</span> Night
         </p>
       </div>
     </>

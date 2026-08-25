@@ -1,8 +1,9 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Trash2, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useTransition } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { deleteUser } from "../../actions";
 
 export function AdminDeleteUserButton({
@@ -12,38 +13,40 @@ export function AdminDeleteUserButton({
   userId: string;
   email: string;
 }) {
-  const [busy, setBusy] = useState(false);
+  const [pending, startTransition] = useTransition();
   return (
-    <form
-      action={async (fd) => {
+    <Button
+      type="button"
+      variant="destructive"
+      size="xs"
+      disabled={pending}
+      onClick={() => {
         if (
           !confirm(
             `Delete user ${email}? This will permanently remove all their homes, reservations, and favorites, plus their images in storage.`,
           )
         )
           return;
-        setBusy(true);
-        try {
-          await deleteUser(fd);
-        } finally {
-          setBusy(false);
-        }
+        const formData = new FormData();
+        formData.set("userId", userId);
+        startTransition(async () => {
+          try {
+            await deleteUser(formData);
+            toast.success("User deleted");
+          } catch (err) {
+            toast.error(
+              err instanceof Error ? err.message : "Could not delete user.",
+            );
+          }
+        });
       }}
     >
-      <input type="hidden" name="userId" value={userId} />
-      <Button
-        type="submit"
-        variant="destructive"
-        size="xs"
-        disabled={busy}
-      >
-        {busy ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
-        ) : (
-          <Trash2 className="h-3 w-3" />
-        )}
-        Delete
-      </Button>
-    </form>
+      {pending ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : (
+        <Trash2 className="h-3 w-3" />
+      )}
+      Delete
+    </Button>
   );
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { ImagePlus, Loader2, Star, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ACCEPTED_IMAGE_TYPES, MAX_NEW_IMAGES_PER_SAVE } from "@/app/lib/home-schema";
@@ -177,14 +178,19 @@ export function HomePhotosEditor({
         primaryImageKey: primaryKey,
       });
       if (result.ok) {
+        toast.success("Photos updated");
         for (const img of newImages) URL.revokeObjectURL(img.previewUrl);
         window.location.reload();
       } else {
-        setError(result.message ?? "Failed to save changes.");
+        const message = result.message ?? "Failed to save changes.";
+        setError(message);
+        toast.error(message);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      setError(message || "Failed to save changes.");
+      const finalMessage = message || "Failed to save changes.";
+      setError(finalMessage);
+      toast.error(finalMessage);
     } finally {
       setIsSaving(false);
     }

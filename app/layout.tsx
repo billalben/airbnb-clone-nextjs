@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "./components/Navbar";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
+import { ToastFlash } from "@/components/toast-flash";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -20,8 +23,12 @@ export default function RootLayout({
       <body
         className={`${inter.variable} flex min-h-screen flex-col font-sans`}
       >
-        <Navbar />
-        <main className="flex-1">{children}</main>
+        <ThemeProvider>
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Toaster />
+          <ToastFlash />
+        </ThemeProvider>
       </body>
     </html>
   );
