@@ -27,7 +27,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getCurrentUser } from "../lib/auth";
 
-function getFullName(user: { given_name?: string; family_name?: string; name?: string; email?: string } | null | undefined) {
+function getFullName(user: { given_name?: string | null; family_name?: string | null; name?: string | null; email?: string | null } | null | undefined) {
   const full = [user?.given_name, user?.family_name].filter(Boolean).join(" ").trim();
   if (full) return full;
   return user?.name ?? user?.email ?? "User";

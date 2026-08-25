@@ -1,5 +1,5 @@
-import Image from "next/image";
 import { useId } from "react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { categoryItems } from "@/app/lib/categoryItems";
 
@@ -19,7 +19,7 @@ export function CategoryGrid({
             key={item.id}
             name={item.name}
             title={item.title}
-            imageUrl={item.imageUrl}
+            icon={item.icon}
             description={item.description}
             selected={isSelected}
             onSelect={() => onChange(item.name)}
@@ -33,14 +33,14 @@ export function CategoryGrid({
 function CategoryCard({
   name,
   title,
-  imageUrl,
+  icon: Icon,
   description,
   selected,
   onSelect,
 }: {
   name: string;
   title: string;
-  imageUrl: string;
+  icon: LucideIcon;
   description: string;
   selected: boolean;
   onSelect: () => void;
@@ -66,13 +66,7 @@ function CategoryCard({
         className="sr-only"
       />
       <div className="flex items-center gap-3 p-4">
-        <Image
-          src={imageUrl}
-          alt={title}
-          height={40}
-          width={40}
-          className="h-10 w-10"
-        />
+        <Icon className="h-10 w-10" />
         <div className="flex flex-col">
           <span className="font-medium">{title}</span>
           <span className="text-xs text-muted-foreground">{description}</span>

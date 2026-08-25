@@ -55,6 +55,7 @@ export default async function Home({
   searchParams?: Promise<TypeSearchParams>;
 }) {
   const params = await searchParams;
+
   return (
     <div className="container mx-auto px-5 lg:px-10">
       <MapFilterItems />
