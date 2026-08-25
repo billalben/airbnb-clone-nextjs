@@ -13,11 +13,7 @@ import {
   stepFields,
   type HomeFormValues,
 } from "@/app/lib/home-schema";
-import {
-  getSteps,
-  StepperHeader,
-  type StepKey,
-} from "./StepperHeader";
+import { getSteps, StepperHeader, type StepKey } from "./StepperHeader";
 import { CategoryStep, DetailsStep, ImageStep } from "./Steps";
 import { LocationStep } from "./LocationStep";
 
@@ -46,11 +42,7 @@ export type HomeFormProps = {
   ) => Promise<HomeFormActionResult>;
 };
 
-export function HomeFormWizard({
-  mode,
-  defaultValues,
-  action,
-}: HomeFormProps) {
+export function HomeFormWizard({ mode, defaultValues, action }: HomeFormProps) {
   const steps = getSteps(mode);
 
   const form = useForm<HomeFormValues, unknown, HomeFormValues>({
@@ -130,7 +122,8 @@ export function HomeFormWizard({
             }
           }
           const message =
-            result.message ?? "Please review the highlighted fields and try again.";
+            result.message ??
+            "Please review the highlighted fields and try again.";
           setServerError(message);
           toast.error(message);
         }
@@ -165,12 +158,10 @@ export function HomeFormWizard({
         {step === "category" ? <CategoryStep form={form} /> : null}
         {step === "image" ? <ImageStep form={form} /> : null}
         {step === "details" ? <DetailsStep form={form} /> : null}
-        {step === "location" ? (
-          <LocationStep form={form} />
-        ) : null}
+        {step === "location" ? <LocationStep form={form} /> : null}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-10 border-t bg-background container">
+      <div className="fixed right-0 bottom-0 left-0 z-10 container border-t bg-background">
         <div className="flex h-24 items-center justify-between">
           <Button
             variant="secondary"
@@ -227,6 +218,7 @@ function SubmitButton({
       </Button>
     );
   }
+
   return (
     <Button type="submit" size="lg">
       {label}

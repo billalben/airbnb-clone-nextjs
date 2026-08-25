@@ -20,7 +20,7 @@ export function Navbar() {
           <Image
             src={MobileLogo}
             alt="Mobile Logo"
-            className="block w-8 lg:hidden"
+            className="block w-8 rounded-md lg:hidden"
           />
         </Link>
 

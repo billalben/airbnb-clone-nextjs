@@ -6,7 +6,12 @@ import { ImagePlus, Loader2, Star, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ACCEPTED_IMAGE_TYPES, MAX_NEW_IMAGES_PER_SAVE } from "@/app/lib/home-schema";
+import { cn } from "@/lib/utils";
+import {
+  ACCEPTED_IMAGE_TYPES,
+  MAX_IMAGES_PER_HOME,
+  MAX_NEW_IMAGES_PER_SAVE,
+} from "@/app/lib/home-schema";
 
 type InitialImage = {
   id: string;
@@ -78,6 +83,15 @@ export function HomePhotosEditor({
     [existing],
   );
 
+  const totalVisible = visibleExisting.length + newImages.length;
+
+  const effectivePrimaryKey =
+    totalVisible === 1
+      ? visibleExisting.length === 1
+        ? visibleExisting[0].id
+        : newImages[0].tempId
+      : primaryKey;
+
   const isDirty = useMemo(() => {
     if (existing.some((img) => img.isDeleted)) return true;
     if (newImages.length > 0) return true;
@@ -100,6 +114,11 @@ export function HomePhotosEditor({
   const handleAddFiles = useCallback(
     (files: FileList | null) => {
       if (!files || files.length === 0) return;
+      const remainingSlots = Math.max(0, MAX_IMAGES_PER_HOME - totalVisible);
+      if (remainingSlots === 0) {
+        toast.error(`A home can have at most ${MAX_IMAGES_PER_HOME} photos.`);
+        return;
+      }
       const incoming: NewImageState[] = [];
       for (const file of Array.from(files)) {
         if (
@@ -117,20 +136,35 @@ export function HomePhotosEditor({
         });
       }
       if (incoming.length === 0) return;
+      const allowed = incoming.slice(
+        0,
+        Math.min(MAX_NEW_IMAGES_PER_SAVE, remainingSlots),
+      );
+      if (allowed.length === 0) return;
       setNewImages((prev) => {
-        const next = [...prev, ...incoming];
-        if (next.length > MAX_NEW_IMAGES_PER_SAVE) {
-          return next.slice(0, MAX_NEW_IMAGES_PER_SAVE);
+        const next = [...prev, ...allowed];
+        if (next.length > remainingSlots) {
+          return next.slice(0, remainingSlots);
         }
         return next;
       });
       if (inputRef.current) inputRef.current.value = "";
     },
-    [],
+    [totalVisible],
   );
 
   const handleRemove = useCallback(
     (key: string) => {
+      if (totalVisible <= 1) {
+        toast.error("A home must have at least one photo.");
+        return;
+      }
+      if (effectivePrimaryKey === key) {
+        toast.error(
+          "You cannot remove the primary photo. Set another photo as primary first.",
+        );
+        return;
+      }
       if (key.startsWith("new-")) {
         setNewImages((prev) => {
           const target = prev.find((img) => img.tempId === key);
@@ -144,9 +178,8 @@ export function HomePhotosEditor({
           ),
         );
       }
-      if (primaryKey === key) setPrimaryKey(null);
     },
-    [primaryKey],
+    [totalVisible, effectivePrimaryKey],
   );
 
   const handleReset = useCallback(() => {
@@ -172,10 +205,17 @@ export function HomePhotosEditor({
       const deleteImageIds = existing
         .filter((img) => img.isDeleted)
         .map((img) => img.id);
+      let primaryImageKey = effectivePrimaryKey;
+      if (effectivePrimaryKey && effectivePrimaryKey.startsWith("new-")) {
+        const index = newImages.findIndex(
+          (img) => img.tempId === effectivePrimaryKey,
+        );
+        primaryImageKey = index >= 0 ? `new-${index}` : null;
+      }
       const result = await action({
         newImageFiles,
         deleteImageIds,
-        primaryImageKey: primaryKey,
+        primaryImageKey,
       });
       if (result.ok) {
         toast.success("Photos updated");
@@ -194,9 +234,8 @@ export function HomePhotosEditor({
     } finally {
       setIsSaving(false);
     }
-  }, [newImages, existing, primaryKey, action]);
+  }, [newImages, existing, effectivePrimaryKey, action]);
 
-  const totalVisible = visibleExisting.length + newImages.length;
   const newImageCount = newImages.length;
 
   return (
@@ -225,7 +264,8 @@ export function HomePhotosEditor({
               key={img.id}
               url={img.url}
               alt="Home photo"
-              isPrimary={primaryKey === img.id}
+              isPrimary={effectivePrimaryKey === img.id}
+              canRemove={totalVisible > 1 && effectivePrimaryKey !== img.id}
               onSetPrimary={() => setPrimaryKey(img.id)}
               onRemove={() => handleRemove(img.id)}
             />
@@ -235,8 +275,9 @@ export function HomePhotosEditor({
               key={img.tempId}
               url={img.previewUrl}
               alt="New photo preview"
-              isPrimary={primaryKey === img.tempId}
+              isPrimary={effectivePrimaryKey === img.tempId}
               isNew
+              canRemove={totalVisible > 1 && effectivePrimaryKey !== img.tempId}
               onSetPrimary={() => setPrimaryKey(img.tempId)}
               onRemove={() => handleRemove(img.tempId)}
             />
@@ -245,7 +286,14 @@ export function HomePhotosEditor({
       )}
 
       <div className="mt-6 space-y-2">
-        <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-muted-foreground/40 bg-muted/30 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary">
+        <label
+          className={cn(
+            "inline-flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-muted-foreground/40 bg-muted/30 px-4 py-2 text-sm font-medium text-muted-foreground transition-colors",
+            totalVisible >= MAX_IMAGES_PER_HOME
+              ? "pointer-events-none opacity-50"
+              : "hover:border-primary hover:text-primary",
+          )}
+        >
           <ImagePlus className="h-4 w-4" />
           Add photos
           <input
@@ -254,12 +302,13 @@ export function HomePhotosEditor({
             accept={ACCEPTED_IMAGE_TYPES.join(",")}
             multiple
             className="sr-only"
+            disabled={totalVisible >= MAX_IMAGES_PER_HOME}
             onChange={(event) => handleAddFiles(event.target.files)}
           />
         </label>
         <p className="text-xs text-muted-foreground">
-          JPEG, PNG, or WEBP. Up to 5MB each. You can add up to{" "}
-          {MAX_NEW_IMAGES_PER_SAVE} photos per save.
+          JPEG, PNG, or WEBP. Up to 5MB each. A home can have at most{" "}
+          {MAX_IMAGES_PER_HOME} photos.
           {newImageCount > 0 && (
             <>
               {" "}
@@ -311,6 +360,7 @@ function PhotoTile({
   alt,
   isPrimary,
   isNew,
+  canRemove,
   onSetPrimary,
   onRemove,
 }: {
@@ -318,6 +368,7 @@ function PhotoTile({
   alt: string;
   isPrimary: boolean;
   isNew?: boolean;
+  canRemove: boolean;
   onSetPrimary: () => void;
   onRemove: () => void;
 }) {
@@ -354,14 +405,16 @@ function PhotoTile({
             Set primary
           </button>
         )}
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label="Remove photo"
-          className="ml-auto inline-flex items-center justify-center rounded bg-background/90 p-1.5 text-destructive shadow-sm hover:bg-background"
-        >
-          <X className="h-3 w-3" />
-        </button>
+        {canRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label="Remove photo"
+            className="ml-auto inline-flex items-center justify-center rounded bg-background/90 p-1.5 text-destructive shadow-sm hover:bg-background"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
       </div>
     </li>
   );

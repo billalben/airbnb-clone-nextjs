@@ -3,6 +3,8 @@ import * as z from "zod";
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
+export const MAX_IMAGES_PER_HOME = 4;
+
 export const COUNTER_MIN = 1;
 export const COUNTER_MAX = 10;
 

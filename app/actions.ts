@@ -5,7 +5,12 @@ import { revalidatePath } from "next/cache";
 import { connection } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "./lib/db";
-import { canDeleteHome, canEditHome, requireAdmin, requireUser } from "./lib/auth";
+import {
+  canDeleteHome,
+  canEditHome,
+  requireAdmin,
+  requireUser,
+} from "./lib/auth";
 import {
   deleteHomeImages,
   uploadHomeImage,
@@ -18,6 +23,7 @@ import {
 import {
   ACCEPTED_IMAGE_TYPES,
   MAX_IMAGE_BYTES,
+  MAX_IMAGES_PER_HOME,
   homeEditFormSchema,
   homeFormSchema,
 } from "./lib/home-schema";
@@ -48,7 +54,10 @@ async function readHomeFormData(formData: FormData, isEdit: boolean) {
     title: formData.get("title")?.toString() ?? "",
     description: formData.get("description")?.toString() ?? "",
     price: formData.get("price")?.toString() ?? "",
-    image: formData.get("image") as File | undefined,
+    image:
+      formData.get("image") instanceof File
+        ? (formData.get("image") as File)
+        : undefined,
     guests: formData.get("guests")?.toString() ?? "",
     bedrooms: formData.get("bedrooms")?.toString() ?? "",
     bathrooms: formData.get("bathrooms")?.toString() ?? "",
@@ -78,9 +87,7 @@ async function finalizeHomeSubmission({
   isEdit,
   existingHomeId,
 }: {
-  values: NonNullable<
-    Awaited<ReturnType<typeof readHomeFormData>>["values"]
-  >;
+  values: NonNullable<Awaited<ReturnType<typeof readHomeFormData>>["values"]>;
   image: File | undefined;
   isEdit: boolean;
   existingHomeId?: string;
@@ -181,7 +188,8 @@ export async function createHome(
   }
   const result = await finalizeHomeSubmission({
     values: parsed.values,
-    image: parsed.values?.image instanceof File ? parsed.values.image : undefined,
+    image:
+      parsed.values?.image instanceof File ? parsed.values.image : undefined,
     isEdit: false,
   });
   if (result.ok) {
@@ -199,15 +207,19 @@ export async function updateHome(
   if (!parsed.ok) {
     return { ok: false, fieldErrors: parsed.fieldErrors };
   }
+
   const result = await finalizeHomeSubmission({
     values: parsed.values,
-    image: parsed.values?.image instanceof File ? parsed.values.image : undefined,
+    image:
+      parsed.values?.image instanceof File ? parsed.values.image : undefined,
     isEdit: true,
     existingHomeId: homeId,
   });
+
   if (result.ok) {
-    redirect(`/my-homes/${homeId}/edit?toast=home_updated`);
+    redirect(`/home/${homeId}?toast=home_updated`);
   }
+
   return result;
 }
 
@@ -474,7 +486,33 @@ export async function updateHomeImages(
       .map((img) => img.id),
   );
 
+  const remainingExisting = existingImages.filter(
+    (img) => !validDeleteIds.has(img.id),
+  );
+
   const deletions = existingImages.filter((img) => validDeleteIds.has(img.id));
+
+  const remainingCount = remainingExisting.length + newImageFiles.length;
+  if (remainingCount === 0) {
+    return { ok: false, message: "A home must have at least one photo." };
+  }
+  if (remainingCount > MAX_IMAGES_PER_HOME) {
+    return {
+      ok: false,
+      message: `A home can have at most ${MAX_IMAGES_PER_HOME} photos.`,
+    };
+  }
+
+  if (
+    primaryImageKey &&
+    !primaryImageKey.startsWith("new-") &&
+    validDeleteIds.has(primaryImageKey)
+  ) {
+    return {
+      ok: false,
+      message: "You cannot remove the primary photo.",
+    };
+  }
 
   const uploadedRows: { id: string }[] = [];
   if (newImageFiles.length > 0) {
@@ -498,12 +536,28 @@ export async function updateHomeImages(
   if (primaryImageKey) {
     if (primaryImageKey.startsWith("new-")) {
       const index = Number(primaryImageKey.slice(4));
-      if (Number.isInteger(index) && index >= 0 && index < uploadedRows.length) {
+      if (
+        Number.isInteger(index) &&
+        index >= 0 &&
+        index < uploadedRows.length
+      ) {
         primaryImageId = uploadedRows[index].id;
       }
-    } else if (validDeleteIds.has(primaryImageKey) === false) {
-      const exists = existingImages.some((img) => img.id === primaryImageKey);
-      if (exists) primaryImageId = primaryImageKey;
+    } else if (remainingExisting.some((img) => img.id === primaryImageKey)) {
+      primaryImageId = primaryImageKey;
+    }
+  }
+
+  if (!primaryImageId) {
+    const currentPrimary = existingImages.find((img) => img.isPrimary);
+    if (
+      currentPrimary &&
+      remainingExisting.some((i) => i.id === currentPrimary.id)
+    ) {
+      primaryImageId = currentPrimary.id;
+    } else {
+      const firstRemaining = remainingExisting[0] ?? uploadedRows[0];
+      primaryImageId = firstRemaining?.id ?? null;
     }
   }
 
@@ -542,7 +596,8 @@ export async function updateHomeImages(
 export async function deleteHomeImage(formData: FormData) {
   const imageId = formData.get("imageId") as string;
   const homeId = formData.get("homeId") as string;
-  if (!imageId || !homeId) throw new Error("Image ID and Home ID are required.");
+  if (!imageId || !homeId)
+    throw new Error("Image ID and Home ID are required.");
 
   const edit = await canEditHome(homeId);
   if (!edit) throw new Error("Not allowed.");
@@ -587,7 +642,8 @@ export async function deleteHomeImage(formData: FormData) {
 export async function setPrimaryImage(formData: FormData) {
   const imageId = formData.get("imageId") as string;
   const homeId = formData.get("homeId") as string;
-  if (!imageId || !homeId) throw new Error("Image ID and Home ID are required.");
+  if (!imageId || !homeId)
+    throw new Error("Image ID and Home ID are required.");
 
   const edit = await canEditHome(homeId);
   if (!edit) throw new Error("Not allowed.");
