@@ -8,16 +8,12 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { ListingCard } from "./components/ListingCard";
 import { connection } from "next/server";
 import { getImageUrls } from "./lib/supabase/storage";
+import { parseSearchParams } from "./lib/parseSearchParams";
 
-type TypeSearchParams = {
-  filter?: string;
-  country?: string;
-  guest?: string;
-  room?: string;
-  bathroom?: string;
-};
-
-async function getData(searchParams: TypeSearchParams, userId?: string) {
+async function getData(
+  searchParams: ReturnType<typeof parseSearchParams>,
+  userId?: string,
+) {
   await connection();
   const data = await prisma.home.findMany({
     where: {
@@ -52,9 +48,10 @@ async function getData(searchParams: TypeSearchParams, userId?: string) {
 export default async function Home({
   searchParams,
 }: {
-  searchParams?: Promise<TypeSearchParams>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const params = await searchParams;
+  const raw = await searchParams;
+  const params = parseSearchParams(raw);
 
   return (
     <div className="container mx-auto px-5 lg:px-10">
@@ -67,7 +64,9 @@ export default async function Home({
   );
 }
 
-async function ShowItems(searchParams: TypeSearchParams) {
+async function ShowItems(
+  searchParams: ReturnType<typeof parseSearchParams>,
+) {
   const { getUser } = getKindeServerSession();
   const user = await getUser();
   const data = await getData(searchParams, user?.id);

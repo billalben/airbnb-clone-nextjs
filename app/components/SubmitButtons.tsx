@@ -1,21 +1,30 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Heart, Loader2, Trash2, Star, Save } from "lucide-react";
+import { Heart, Loader2, Trash2, Star, Save, type LucideIcon } from "lucide-react";
 import { useFormStatus } from "react-dom";
 
-export function CreationSubmit() {
+export function CreationSubmit({
+  label = "Next",
+  icon: Icon,
+  size = "lg",
+}: {
+  label?: string;
+  icon?: LucideIcon;
+  size?: "default" | "sm" | "lg" | "icon";
+}) {
   const { pending } = useFormStatus();
   return (
     <>
       {pending ? (
-        <Button disabled size="lg">
+        <Button disabled size={size}>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Please Wait
         </Button>
       ) : (
-        <Button type="submit" size="lg">
-          Next
+        <Button type="submit" size={size}>
+          {Icon ? <Icon className="mr-2 h-4 w-4" /> : null}
+          {label}
         </Button>
       )}
     </>

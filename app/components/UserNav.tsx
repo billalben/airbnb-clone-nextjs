@@ -27,8 +27,21 @@ import Link from "next/link";
 import Image from "next/image";
 import { getCurrentUser } from "../lib/auth";
 
-function getFullName(user: { given_name?: string | null; family_name?: string | null; name?: string | null; email?: string | null } | null | undefined) {
-  const full = [user?.given_name, user?.family_name].filter(Boolean).join(" ").trim();
+function getFullName(
+  user:
+    | {
+        given_name?: string | null;
+        family_name?: string | null;
+        name?: string | null;
+        email?: string | null;
+      }
+    | null
+    | undefined,
+) {
+  const full = [user?.given_name, user?.family_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
   if (full) return full;
   return user?.name ?? user?.email ?? "User";
 }
@@ -43,14 +56,14 @@ export async function UserNav() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex items-center gap-x-3 rounded-full border px-2 py-2 transition-colors hover:bg-muted/20 hover:shadow-sm lg:px-4 lg:py-2">
-        <MenuIcon className="h-6 w-6 lg:h-5 lg:w-5" />
+        <MenuIcon className="h-5 w-5 lg:h-4 lg:w-4" />
 
         {hasPicture ? (
           <Image
             src={user!.picture!}
             alt="User Avatar"
-            width={32}
-            height={32}
+            width={28}
+            height={25}
             className="hidden rounded-full lg:block"
           />
         ) : (
@@ -58,15 +71,15 @@ export async function UserNav() {
             aria-hidden
             className="hidden h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground lg:flex"
           >
-            <User className="h-5 w-5" />
+            <User className="h-4 w-4" />
           </div>
         )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[200px]">
+      <DropdownMenuContent align="end" className="w-50">
         {user ? (
           <>
             <div className="px-2 py-1.5 select-none">
-              <p className="text-sm font-medium leading-tight">
+              <p className="text-sm leading-tight font-medium">
                 {getFullName(user)}
               </p>
               {user.email && (
@@ -89,13 +102,19 @@ export async function UserNav() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Link href="/favorites" className="flex w-full items-center gap-2">
+              <Link
+                href="/favorites"
+                className="flex w-full items-center gap-2"
+              >
                 <Heart className="h-4 w-4" />
                 My Favorites
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Link href="/reservations" className="flex w-full items-center gap-2">
+              <Link
+                href="/reservations"
+                className="flex w-full items-center gap-2"
+              >
                 <CalendarCheck className="h-4 w-4" />
                 My Reservations
               </Link>

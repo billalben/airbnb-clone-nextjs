@@ -8,18 +8,18 @@ import { SearchModalComponent } from "./SearchComponent";
 export function Navbar() {
   return (
     <nav className="w-full border-b">
-      <div className="container mx-auto flex items-center justify-between px-5 py-5 lg:px-10">
+      <div className="container mx-auto flex items-center justify-between px-5 py-2">
         <Link href="/">
           <Image
             src={DesktopLogo}
             alt="Desktop Logo"
-            className="hidden w-32 lg:block"
+            className="hidden w-28 lg:block"
           />
 
           <Image
             src={MobileLogo}
             alt="Mobile Logo"
-            className="block w-12 lg:hidden"
+            className="block w-8 lg:hidden"
           />
         </Link>
 
