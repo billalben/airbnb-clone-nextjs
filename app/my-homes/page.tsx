@@ -91,6 +91,7 @@ export default async function MyHomes() {
               />
               <div className="flex gap-2 p-4 pt-0">
                 <Button
+                  nativeButton={false}
                   render={
                     <Link href={`/my-homes/${item.id}/edit`}>
                       <Pencil className="mr-1 h-4 w-4" />
