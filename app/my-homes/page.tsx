@@ -80,37 +80,34 @@ export default async function MyHomes() {
       ) : (
         <div className="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {items.map((item) => (
-            <div
+            <ListingCardClient
               key={item.id}
-              className="flex flex-col gap-2"
-            >
-              <ListingCardClient
-                imageUrls={item.imageUrls}
-                homeId={item.id}
-                title={item.title}
-                price={item.price}
-                location={item.country}
-                userId={user.id}
-                pathName="/my-homes"
-                isInFavoriteList={item.isInFavoriteList}
-                hideLink
-              />
-              <div className="flex gap-2">
-                <Button
-                  nativeButton={false}
-                  render={
-                    <Link href={`/my-homes/${item.id}/edit`}>
-                      <Pencil className="mr-1 h-4 w-4" />
-                      Edit
-                    </Link>
-                  }
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                />
-                <DeleteHomeButton homeId={item.id} className="flex-1" />
-              </div>
-            </div>
+              imageUrls={item.imageUrls}
+              homeId={item.id}
+              title={item.title}
+              price={item.price}
+              location={item.country}
+              userId={user.id}
+              pathName="/my-homes"
+              isInFavoriteList={item.isInFavoriteList}
+              actions={
+                <div className="flex gap-2 px-4 pb-4">
+                  <Button
+                    nativeButton={false}
+                    render={
+                      <Link href={`/my-homes/${item.id}/edit`}>
+                        <Pencil className="mr-1 h-4 w-4" />
+                        Edit
+                      </Link>
+                    }
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                  />
+                  <DeleteHomeButton homeId={item.id} className="flex-1" />
+                </div>
+              }
+            />
           ))}
         </div>
       )}

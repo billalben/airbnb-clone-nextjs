@@ -19,6 +19,7 @@ interface iAppProps {
   pathName: string;
   hideLink?: boolean;
   className?: string;
+  actions?: React.ReactNode;
 }
 
 export function ListingCardClient({
@@ -32,6 +33,7 @@ export function ListingCardClient({
   pathName,
   hideLink,
   className,
+  actions,
 }: iAppProps) {
   const { getCountryByValue } = useCountries();
   const country = location ? getCountryByValue(location) : undefined;
@@ -94,11 +96,29 @@ export function ListingCardClient({
     >
       {media}
       {info}
+      {actions}
     </Card>
   );
 
   if (hideLink) {
     return <div className="h-full">{card}</div>;
+  }
+
+  if (actions) {
+    return (
+      <Card
+        className={cn(
+          "h-full gap-0 overflow-hidden py-0 transition-shadow hover:shadow-md",
+          className,
+        )}
+      >
+        <Link href={`/home/${homeId}`} className="group block h-full">
+          {media}
+          {info}
+        </Link>
+        {actions}
+      </Card>
+    );
   }
 
   return (
