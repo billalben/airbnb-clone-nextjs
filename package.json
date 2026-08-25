@@ -14,6 +14,7 @@
     "@kinde-oss/kinde-auth-nextjs": "^2.13.1",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "@prisma/client-runtime-utils": "^7.9.1",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "class-variance-authority": "^0.7.1",

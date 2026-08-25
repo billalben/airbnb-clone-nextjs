@@ -5,7 +5,8 @@ import { SelectCalender } from "@/app/components/SelectCalender";
 import { ReservationSubmitButton } from "@/app/components/SubmitButtons";
 import prisma from "@/app/lib/db";
 import { getCountryByValue } from "@/app/lib/getCountries";
-import { getImageUrl } from "@/app/lib/supabase/storage";
+import { getImageUrls } from "@/app/lib/supabase/storage";
+import { getCurrentUser } from "@/app/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
@@ -13,15 +14,15 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
+import { Pencil } from "lucide-react";
 
 async function getData(homeId: string) {
   await connection();
   const data = await prisma.home.findUnique({
-    where: {
-      id: homeId,
-    },
+    where: { id: homeId },
     select: {
-      photo: true,
+      id: true,
+      userId: true,
       description: true,
       guests: true,
       bedrooms: true,
@@ -30,17 +31,16 @@ async function getData(homeId: string) {
       categoryName: true,
       price: true,
       country: true,
-      Reservation: {
-        where: {
-          homeId: homeId,
-        },
+      images: {
+        orderBy: [{ isPrimary: "desc" }, { position: "asc" }],
+        select: { id: true, path: true, isPrimary: true },
       },
-
+      Reservation: {
+        where: { homeId },
+        select: { startDate: true, endDate: true },
+      },
       User: {
-        select: {
-          profileImage: true,
-          firstName: true,
-        },
+        select: { profileImage: true, firstName: true },
       },
     },
   });
@@ -55,19 +55,45 @@ export default async function HomeRoute({
 }) {
   const { id } = await params;
   const data = await getData(id);
-  const imageUrl = await getImageUrl(data?.photo);
+  const imagePaths = data?.images?.map((i) => i.path) ?? [];
+  const urls = await getImageUrls(imagePaths);
+  const images =
+    data?.images?.map((img, i) => ({
+      id: img.id,
+      url: urls[i] ?? null,
+      isPrimary: img.isPrimary,
+    })) ?? [];
+  const primaryImage = images[0]?.url;
+  const galleryImages = images.slice(1);
   const country = getCountryByValue(data?.country as string);
   const { getUser } = getKindeServerSession();
-  const user = await getUser();
+  const kindeUser = await getUser();
+  const dbUser = await getCurrentUser();
+
+  const isOwner = !!dbUser?.id && data?.userId === dbUser.id;
 
   return (
     <div className="container mx-auto mb-12 mt-10">
-      <h1 className="mb-5 text-2xl font-medium">{data?.title}</h1>
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <h1 className="text-2xl font-medium">{data?.title}</h1>
+        {isOwner && (
+          <Button
+            render={
+              <Link href={`/my-homes/${data?.id}/edit`}>
+                <Pencil className="mr-1 h-4 w-4" />
+                Edit
+              </Link>
+            }
+            variant="outline"
+            size="sm"
+          />
+        )}
+      </div>
       <div className="relative h-[420px] md:h-[550px]">
-        {imageUrl ? (
+        {primaryImage ? (
           <Image
             alt="Image of Home"
-            src={imageUrl}
+            src={primaryImage}
             fill
             className="h-full w-full rounded-lg object-cover"
           />
@@ -75,6 +101,26 @@ export default async function HomeRoute({
           <div className="h-full w-full rounded-lg bg-muted" />
         )}
       </div>
+
+      {galleryImages.length > 0 && (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          {galleryImages.map((img) =>
+            img.url ? (
+              <div
+                key={img.id}
+                className="relative aspect-square overflow-hidden rounded-md bg-muted"
+              >
+                <Image
+                  src={img.url}
+                  alt="Home gallery"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ) : null,
+          )}
+        </div>
+      )}
 
       <div className="relative mt-8 grid gap-12 md:grid-cols-[1fr_332px]">
         <div>
@@ -115,11 +161,10 @@ export default async function HomeRoute({
 
         <form action={createReservation} className="mx-auto">
           <input type="hidden" name="homeId" value={id} />
-          <input type="hidden" name="userId" value={user?.id} />
 
           <SelectCalender reservation={data?.Reservation} />
 
-          {user?.id ? (
+          {kindeUser?.id ? (
             <ReservationSubmitButton />
           ) : (
             <Button

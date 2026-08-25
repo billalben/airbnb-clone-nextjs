@@ -1,31 +1,32 @@
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { ListingCard } from "../components/ListingCard";
+import { NoItems } from "../components/NoItem";
 import prisma from "../lib/db";
 import { redirect } from "next/navigation";
-import { NoItems } from "../components/NoItem";
-import { ListingCard } from "../components/ListingCard";
 import { unstable_noStore as noStore } from "next/cache";
-import { getImageUrl } from "../lib/supabase/storage";
+import { getImageUrls } from "../lib/supabase/storage";
 
 async function getData(userId: string) {
   noStore();
   const data = await prisma.favorite.findMany({
-    where: {
-      userId: userId,
-    },
+    where: { userId },
     select: {
       Home: {
         select: {
-          photo: true,
           id: true,
-          Favorite: true,
+          Favorite: { select: { id: true } },
           price: true,
           country: true,
           description: true,
+          images: {
+            where: { isPrimary: true },
+            select: { path: true },
+            take: 1,
+          },
         },
       },
     },
   });
-
   return data;
 }
 
@@ -36,10 +37,13 @@ export default async function FavoriteRoute() {
   const data = await getData(user.id);
 
   const items = await Promise.all(
-    data.map(async (item) => ({
-      ...item,
-      imageUrl: await getImageUrl(item.Home?.photo),
-    })),
+    data.map(async (item) => {
+      const urls = await getImageUrls(item.Home?.images.map((i) => i.path) ?? []);
+      return {
+        ...item,
+        imageUrl: urls[0] ?? null,
+      };
+    }),
   );
 
   return (
@@ -63,7 +67,7 @@ export default async function FavoriteRoute() {
               imageUrl={item.imageUrl}
               price={item.Home?.price as number}
               userId={user.id}
-              favoriteId={item.Home?.Favorite[0].id as string}
+              favoriteId={item.Home?.Favorite[0]?.id}
               isInFavoriteList={
                 (item.Home?.Favorite.length as number) > 0 ? true : false
               }

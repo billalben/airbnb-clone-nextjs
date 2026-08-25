@@ -5,7 +5,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MenuIcon } from "lucide-react";
+import { MenuIcon, ShieldCheck } from "lucide-react";
 import {
   RegisterLink,
   LoginLink,
@@ -15,10 +15,13 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import Link from "next/link";
 import { createAirbnbHome } from "../actions";
 import Image from "next/image";
+import { getCurrentUser } from "../lib/auth";
 
 export async function UserNav() {
   const { getUser } = getKindeServerSession();
   const user = await getUser();
+  const dbUser = await getCurrentUser();
+  const isAdmin = dbUser?.role === "ADMIN";
 
   const createHomeWithId = createAirbnbHome.bind(null, {
     userId: user?.id as string,
@@ -62,6 +65,20 @@ export async function UserNav() {
                 My Reservations
               </Link>
             </DropdownMenuItem>
+            {isAdmin && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <Link
+                    href="/admin"
+                    className="flex w-full items-center gap-2 font-medium"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    Admin Dashboard
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <LogoutLink className="w-full">Logout</LogoutLink>

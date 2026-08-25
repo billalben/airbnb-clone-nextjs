@@ -7,7 +7,7 @@ import { NoItems } from "./components/NoItem";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { ListingCard } from "./components/ListingCard";
 import { connection } from "next/server";
-import { getImageUrl } from "./lib/supabase/storage";
+import { getImageUrls } from "./lib/supabase/storage";
 
 type TypeSearchParams = {
   filter?: string;
@@ -31,19 +31,21 @@ async function getData(searchParams: TypeSearchParams, userId?: string) {
       bathrooms: searchParams?.bathroom ?? undefined,
     },
     select: {
-      photo: true,
       id: true,
       price: true,
       description: true,
       country: true,
+      images: {
+        where: { isPrimary: true },
+        select: { path: true },
+        take: 1,
+      },
       Favorite: {
-        where: {
-          userId: userId ?? undefined,
-        },
+        where: { userId: userId ?? undefined },
+        select: { id: true },
       },
     },
   });
-
   return data;
 }
 
@@ -70,10 +72,13 @@ async function ShowItems(searchParams: TypeSearchParams) {
   const data = await getData(searchParams, user?.id);
 
   const items = await Promise.all(
-    data.map(async (item) => ({
-      ...item,
-      imageUrl: await getImageUrl(item.photo),
-    })),
+    data.map(async (item) => {
+      const urls = await getImageUrls(item.images.map((i) => i.path));
+      return {
+        ...item,
+        imageUrl: urls[0] ?? null,
+      };
+    }),
   );
 
   return (

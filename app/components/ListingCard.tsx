@@ -11,9 +11,10 @@ interface iAppProps {
   price: number;
   userId: string | undefined;
   isInFavoriteList: boolean;
-  favoriteId: string;
+  favoriteId?: string;
   homeId: string;
   pathName: string;
+  hideLink?: boolean;
 }
 
 export function ListingCard({
@@ -26,12 +27,13 @@ export function ListingCard({
   homeId,
   isInFavoriteList,
   pathName,
+  hideLink,
 }: iAppProps) {
   const { getCountryByValue } = useCountries();
   const country = getCountryByValue(location);
 
-  return (
-    <div className="flex flex-col border">
+  const content = (
+    <>
       <div className="relative h-72">
         {imageUrl ? (
           <Image
@@ -44,9 +46,9 @@ export function ListingCard({
           <div className="h-full w-full rounded-lg bg-muted" />
         )}
 
-        {userId && (
+        {userId && favoriteId !== undefined && (
           <div className="absolute right-2 top-2 z-10">
-            {isInFavoriteList ? (
+            {isInFavoriteList && favoriteId ? (
               <form action={DeleteFromFavorite}>
                 <input type="hidden" name="favoriteId" value={favoriteId} />
                 <input type="hidden" name="userId" value={userId} />
@@ -65,7 +67,7 @@ export function ListingCard({
         )}
       </div>
 
-      <Link href={`/home/${homeId}`} className="mt-2 p-4">
+      <div className="mt-2 p-4">
         <h3 className="text-base font-medium">
           {country?.flag} {country?.label} / {country?.region}
         </h3>
@@ -78,7 +80,17 @@ export function ListingCard({
         <p className="pt-2 text-muted-foreground">
           <span className="font-medium text-black">${price}</span> Night
         </p>
-      </Link>
+      </div>
+    </>
+  );
+
+  if (hideLink) {
+    return <div className="flex flex-col">{content}</div>;
+  }
+
+  return (
+    <div className="flex flex-col border rounded-lg overflow-hidden">
+      <Link href={`/home/${homeId}`}>{content}</Link>
     </div>
   );
 }

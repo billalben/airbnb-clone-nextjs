@@ -4,32 +4,30 @@ import { NoItems } from "../components/NoItem";
 import prisma from "../lib/db";
 import { redirect } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
-import { getImageUrl } from "../lib/supabase/storage";
+import { getImageUrls } from "../lib/supabase/storage";
 
 async function getData(userId: string) {
   noStore();
   const data = await prisma.reservation.findMany({
-    where: {
-      userId: userId,
-    },
+    where: { userId },
     select: {
+      id: true,
       Home: {
         select: {
           id: true,
           country: true,
-          photo: true,
           description: true,
           price: true,
-          Favorite: {
-            where: {
-              userId: userId,
-            },
+          Favorite: { select: { id: true } },
+          images: {
+            where: { isPrimary: true },
+            select: { path: true },
+            take: 1,
           },
         },
       },
     },
   });
-
   return data;
 }
 
@@ -40,10 +38,13 @@ export default async function ReservationsRoute() {
   const data = await getData(user.id);
 
   const items = await Promise.all(
-    data.map(async (item) => ({
-      ...item,
-      imageUrl: await getImageUrl(item.Home?.photo),
-    })),
+    data.map(async (item) => {
+      const urls = await getImageUrls(item.Home?.images.map((i) => i.path) ?? []);
+      return {
+        ...item,
+        imageUrl: urls[0] ?? null,
+      };
+    }),
   );
 
   return (
@@ -69,7 +70,7 @@ export default async function ReservationsRoute() {
               imageUrl={item.imageUrl}
               price={item.Home?.price as number}
               userId={user.id}
-              favoriteId={item.Home?.Favorite[0]?.id as string}
+              favoriteId={item.Home?.Favorite[0]?.id}
               isInFavoriteList={
                 (item.Home?.Favorite.length as number) > 0 ? true : false
               }
