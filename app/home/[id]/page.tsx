@@ -169,6 +169,7 @@ export default async function HomeRoute({
           ) : (
             <Button
               className="mx-auto block w-fit"
+              nativeButton={false}
               render={<Link href="/api/auth/login" />}
             >
               Make a Reservation

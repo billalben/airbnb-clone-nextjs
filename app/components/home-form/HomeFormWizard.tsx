@@ -172,7 +172,12 @@ export function HomeFormWizard({
 
       <div className="fixed bottom-0 left-0 right-0 z-10 border-t bg-background container">
         <div className="flex h-24 items-center justify-between">
-          <Button variant="secondary" size="lg" render={<Link href="/" />}>
+          <Button
+            variant="secondary"
+            size="lg"
+            nativeButton={false}
+            render={<Link href="/" />}
+          >
             Cancel
           </Button>
           <div className="flex items-center gap-3">
