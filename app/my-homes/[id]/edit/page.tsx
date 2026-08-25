@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import prisma from "@/app/lib/db";
 import { canEditHome } from "@/app/lib/auth";
-import { getAllCountries } from "@/app/lib/getCountries";
 import { getImageUrls } from "@/app/lib/supabase/storage";
 import { HomeFormWizard } from "@/app/components/home-form/HomeFormWizard";
 import { HomePhotosEditor } from "@/app/components/home-form/HomePhotosEditor";
@@ -37,11 +36,6 @@ export default async function EditHomePage({
 
   const home = await getHome(id);
   if (!home) notFound();
-
-  const countries = getAllCountries().map((country) => ({
-    value: country.value,
-    label: `${country.flag} ${country.label} / ${country.region}`,
-  }));
 
   const imageUrls = await getImageUrls(home.images.map((i) => i.path));
   const images = home.images.map((img, i) => ({
@@ -83,7 +77,6 @@ export default async function EditHomePage({
               bathrooms: home.bathrooms,
               country: home.country,
             }}
-            countries={countries}
             action={updateAction}
           />
         </TabsContent>

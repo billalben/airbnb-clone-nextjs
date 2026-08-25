@@ -8,26 +8,17 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { HomeFormValues } from "@/app/lib/home-schema";
 import { LocationMapPreview } from "./LocationMapPreview";
+import { CountryCombobox } from "../CountryCombobox";
 
 type FormShape = UseFormReturn<HomeFormValues>;
 
 export function LocationStep({
   form,
-  countries,
 }: {
   form: FormShape;
-  countries: { value: string; label: string }[];
+  countries?: { value: string; label: string }[];
 }) {
   const error = form.formState.errors.country?.message;
   return (
@@ -44,29 +35,12 @@ export function LocationStep({
               <FieldDescription>
                 Pick the country. We&apos;ll use this for search and filtering.
               </FieldDescription>
-              <Select
-                name={field.name}
-                value={field.value ?? ""}
-                onValueChange={(value) => field.onChange(value as string)}
-              >
-                <SelectTrigger
-                  id="home-form-country"
-                  className="w-full"
-                  aria-invalid={fieldState.invalid}
-                >
-                  <SelectValue placeholder="Select a country" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Countries</SelectLabel>
-                    {countries.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              <CountryCombobox
+                id="home-form-country"
+                value={field.value ?? null}
+                onValueChange={(v) => field.onChange(v ?? "")}
+                aria-invalid={fieldState.invalid}
+              />
               <FieldError errors={[fieldState.error]} />
             </>
           )}

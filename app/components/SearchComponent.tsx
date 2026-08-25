@@ -9,33 +9,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 import { ArrowLeft, Bath, Bed, Globe, Search, Users, X } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { getAllCountries, getCountryByValue } from "../lib/getCountries";
+import { getCountryByValue } from "../lib/getCountries";
 import { Button } from "@/components/ui/button";
 import { CreationSubmit } from "./SubmitButtons";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Counter } from "./Counter";
+import { CountryCombobox } from "./CountryCombobox";
 
 export function SearchModalComponent() {
   const [step, setStep] = useState(1);
   const [locationValue, setLocationValue] = useState("");
-  const countries = getAllCountries().map((country) => ({
-    value: country.value,
-    label: `${country.flag} ${country.label} / ${country.region}`,
-  }));
 
   const searchParams = useSearchParams();
   const countryParam = searchParams.get("country");
@@ -94,26 +82,11 @@ export function SearchModalComponent() {
                 </DialogDescription>
               </DialogHeader>
 
-              <Select
-                required
-                items={countries}
-                onValueChange={(value) => setLocationValue(value as string)}
+              <CountryCombobox
                 value={locationValue}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a Country" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Countries</SelectLabel>
-                    {countries.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+                onValueChange={(v) => setLocationValue(v ?? "")}
+                placeholder="Select a Country"
+              />
             </>
           ) : (
             <>

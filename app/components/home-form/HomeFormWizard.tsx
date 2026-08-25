@@ -40,7 +40,6 @@ export type HomeFormActionResult =
 export type HomeFormProps = {
   mode: HomeFormMode;
   defaultValues?: HomeFormDefaults;
-  countries: { value: string; label: string }[];
   action: (
     values: Record<string, string | number | File | undefined>,
   ) => Promise<HomeFormActionResult>;
@@ -49,7 +48,6 @@ export type HomeFormProps = {
 export function HomeFormWizard({
   mode,
   defaultValues,
-  countries,
   action,
 }: HomeFormProps) {
   const steps = getSteps(mode);
@@ -166,7 +164,7 @@ export function HomeFormWizard({
         {step === "image" ? <ImageStep form={form} /> : null}
         {step === "details" ? <DetailsStep form={form} /> : null}
         {step === "location" ? (
-          <LocationStep form={form} countries={countries} />
+          <LocationStep form={form} />
         ) : null}
       </div>
 
