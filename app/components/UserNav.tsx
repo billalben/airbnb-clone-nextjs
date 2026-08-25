@@ -5,7 +5,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MenuIcon, ShieldCheck } from "lucide-react";
+import {
+  MenuIcon,
+  ShieldCheck,
+  Home,
+  Building2,
+  Heart,
+  CalendarCheck,
+  UserPlus,
+  LogIn,
+  LogOut,
+  User,
+} from "lucide-react";
 import {
   RegisterLink,
   LoginLink,
@@ -16,45 +27,76 @@ import Link from "next/link";
 import Image from "next/image";
 import { getCurrentUser } from "../lib/auth";
 
+function getFullName(user: { given_name?: string; family_name?: string; name?: string; email?: string } | null | undefined) {
+  const full = [user?.given_name, user?.family_name].filter(Boolean).join(" ").trim();
+  if (full) return full;
+  return user?.name ?? user?.email ?? "User";
+}
+
 export async function UserNav() {
   const { getUser } = getKindeServerSession();
   const user = await getUser();
   const dbUser = await getCurrentUser();
   const isAdmin = dbUser?.role === "ADMIN";
+  const hasPicture = Boolean(user?.picture);
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-x-3 rounded-full border px-2 py-2 lg:px-4 lg:py-2">
+      <DropdownMenuTrigger className="flex items-center gap-x-3 rounded-full border px-2 py-2 transition-colors hover:bg-muted/20 hover:shadow-sm lg:px-4 lg:py-2">
         <MenuIcon className="h-6 w-6 lg:h-5 lg:w-5" />
 
-        <Image
-          src={user?.picture ?? "/user.png"}
-          alt="User Avatar"
-          width={32}
-          height={32}
-          className="hidden rounded-full lg:block"
-        />
+        {hasPicture ? (
+          <Image
+            src={user!.picture!}
+            alt="User Avatar"
+            width={32}
+            height={32}
+            className="hidden rounded-full lg:block"
+          />
+        ) : (
+          <div
+            aria-hidden
+            className="hidden h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground lg:flex"
+          >
+            <User className="h-5 w-5" />
+          </div>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[200px]">
         {user ? (
           <>
+            <div className="px-2 py-1.5 select-none">
+              <p className="text-sm font-medium leading-tight">
+                {getFullName(user)}
+              </p>
+              {user.email && (
+                <p className="truncate text-xs text-muted-foreground">
+                  {user.email}
+                </p>
+              )}
+            </div>
+            <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <Link href="/create" className="w-full">
+              <Link href="/create" className="flex w-full items-center gap-2">
+                <Home className="h-4 w-4" />
                 Airbnb your Home
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Link href="/my-homes" className="w-full">
+              <Link href="/my-homes" className="flex w-full items-center gap-2">
+                <Building2 className="h-4 w-4" />
                 My Listings
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Link href="/favorites" className="w-full">
+              <Link href="/favorites" className="flex w-full items-center gap-2">
+                <Heart className="h-4 w-4" />
                 My Favorites
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <Link href="/reservations" className="w-full">
+              <Link href="/reservations" className="flex w-full items-center gap-2">
+                <CalendarCheck className="h-4 w-4" />
                 My Reservations
               </Link>
             </DropdownMenuItem>
@@ -74,16 +116,25 @@ export async function UserNav() {
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem>
-              <LogoutLink className="w-full">Logout</LogoutLink>
+              <LogoutLink className="flex w-full items-center gap-2">
+                <LogOut className="h-4 w-4" />
+                Logout
+              </LogoutLink>
             </DropdownMenuItem>
           </>
         ) : (
           <>
             <DropdownMenuItem>
-              <RegisterLink className="w-full">Register</RegisterLink>
+              <RegisterLink className="flex w-full items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                Register
+              </RegisterLink>
             </DropdownMenuItem>
             <DropdownMenuItem>
-              <LoginLink className="w-full">Login</LoginLink>
+              <LoginLink className="flex w-full items-center gap-2">
+                <LogIn className="h-4 w-4" />
+                Login
+              </LoginLink>
             </DropdownMenuItem>
           </>
         )}
