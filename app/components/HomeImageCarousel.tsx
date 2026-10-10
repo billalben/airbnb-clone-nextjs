@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import {
   Carousel,
@@ -78,13 +77,10 @@ export function HomeImageCarousel({ images }: { images: HomeImage[] }) {
   if (valid.length === 1) {
     return (
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted md:aspect-[16/9]">
-        <Image
+        <img
           src={valid[0].url}
           alt="Image of Home"
-          fill
-          sizes="(min-width: 1024px) 80vw, 100vw"
-          className="object-cover"
-          priority
+          className="absolute inset-0 h-full w-full object-cover"
         />
       </div>
     );
@@ -99,13 +95,10 @@ export function HomeImageCarousel({ images }: { images: HomeImage[] }) {
         {valid.map((img) => (
           <CarouselItem key={img.id} className="basis-full">
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-muted md:aspect-[16/9]">
-              <Image
+              <img
                 src={img.url}
                 alt="Image of Home"
-                fill
-                sizes="(min-width: 1024px) 60vw, 100vw"
-                className="object-cover"
-                priority={img.isPrimary}
+                className="absolute inset-0 h-full w-full object-cover"
               />
             </div>
           </CarouselItem>

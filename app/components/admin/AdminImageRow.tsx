@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Star, Trash2 } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
-import Image from "next/image";
 import { deleteHomeImage, setPrimaryImage } from "../../actions";
 
 export function AdminImageRow({
@@ -55,13 +54,12 @@ export function AdminImageRow({
 
   return (
     <div className="flex items-center gap-2">
-      <Image
+      <img
         src={url}
         alt="Home"
         width={40}
         height={40}
         className="h-10 w-10 rounded object-cover"
-        unoptimized
       />
       {isPrimary ? (
         <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">

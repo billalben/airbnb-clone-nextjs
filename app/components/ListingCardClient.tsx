@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useCountries } from "../lib/getCountries";
 import { FavoriteButton, FavoriteLoginLink } from "@/components/favorite-form";
@@ -56,13 +55,10 @@ export function ListingCardClient({
   const media = (
     <div className="relative aspect-4/3 w-full overflow-hidden bg-muted *:[img]:rounded-none">
       {shownUrl ? (
-        <Image
+        <img
           src={shownUrl}
           alt={title ? `Image of ${title}` : "Image of Home"}
-          fill
-          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-          className="object-cover transition-opacity duration-500"
-          priority={false}
+          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-500"
         />
       ) : null}
       <div className="absolute top-3 right-3 z-10">{heart}</div>

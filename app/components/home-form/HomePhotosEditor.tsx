@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { ImagePlus, Loader2, Star, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -374,12 +373,10 @@ function PhotoTile({
 }) {
   return (
     <li className="group relative aspect-square overflow-hidden rounded-md border bg-muted">
-      <Image
+      <img
         src={url}
         alt={alt}
-        fill
-        unoptimized
-        className="object-cover"
+        className="absolute inset-0 h-full w-full object-cover"
       />
       <div className="absolute inset-x-2 top-2 flex items-center justify-between gap-1">
         {isPrimary ? (

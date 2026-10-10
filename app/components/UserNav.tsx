@@ -24,7 +24,6 @@ import {
 } from "@kinde-oss/kinde-auth-nextjs/components";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import Link from "next/link";
-import Image from "next/image";
 import { getCurrentUser } from "../lib/auth";
 import { ModeToggle } from "@/components/mode-toggle";
 
@@ -60,7 +59,7 @@ export async function UserNav() {
         <MenuIcon className="h-5 w-5 lg:h-4 lg:w-4" />
 
         {hasPicture ? (
-          <Image
+          <img
             src={user!.picture!}
             alt="User Avatar"
             width={28}

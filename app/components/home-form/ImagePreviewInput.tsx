@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import Image from "next/image";
 import { ImagePlus, X } from "lucide-react";
 import { ACCEPTED_IMAGE_TYPES } from "@/app/lib/home-schema";
 import { cn } from "@/lib/utils";
@@ -42,12 +41,9 @@ export function ImagePreviewInput({
           )}
         >
           {displayUrl ? (
-            <Image
+            <img
               src={displayUrl}
               alt="Selected image preview"
-              width={672}
-              height={288}
-              unoptimized
               className="h-72 w-full object-cover"
             />
           ) : (
@@ -101,12 +97,9 @@ export function ImagePreviewInput({
           className="inline-flex h-32 w-32 shrink-0 cursor-pointer items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/40 bg-muted/30 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
         >
           {displayUrl ? (
-            <Image
+            <img
               src={displayUrl}
               alt="Selected image preview"
-              width={128}
-              height={128}
-              unoptimized
               className="h-full w-full rounded-lg object-cover"
             />
           ) : (

@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
-import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Pencil } from "lucide-react";
@@ -110,7 +109,7 @@ export default async function HomeRoute({
             </div>
 
             <div className="flex items-center">
-              <Image
+              <img
                 src={data?.User?.profileImage ?? "/user.png"}
                 width={44}
                 height={44}

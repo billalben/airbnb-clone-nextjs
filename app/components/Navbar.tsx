@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import DesktopLogo from "@/public/airbnb-desktop.png";
@@ -11,14 +10,14 @@ export function Navbar() {
     <nav className="w-full border-b">
       <div className="container mx-auto flex items-center justify-between px-5 py-2">
         <Link href="/">
-          <Image
-            src={DesktopLogo}
+          <img
+            src={DesktopLogo.src}
             alt="Desktop Logo"
             className="hidden w-28 lg:block"
           />
 
-          <Image
-            src={MobileLogo}
+          <img
+            src={MobileLogo.src}
             alt="Mobile Logo"
             className="block w-8 rounded-md lg:hidden"
           />
