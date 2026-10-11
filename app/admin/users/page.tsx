@@ -1,11 +1,11 @@
 import { requireAdmin, getCurrentUser } from "@/app/lib/auth";
 import prisma from "@/app/lib/db";
 import { AdminDeleteUserButton } from "@/app/components/admin/AdminDeleteUserButton";
-import { unstable_noStore as noStore } from "next/cache";
+import { connection } from "next/server";
 
 export default async function AdminUsers() {
   await requireAdmin();
-  noStore();
+  await connection();
   const currentUser = await getCurrentUser();
 
   const users = await prisma.user.findMany({

@@ -382,7 +382,7 @@ export async function loadMoreHomes({
         select: { path: true },
       },
       Favorite: {
-        where: { userId: user?.id },
+        where: { userId: user?.id ?? "" },
         select: { id: true },
         take: 1,
       },
@@ -402,7 +402,9 @@ export async function loadMoreHomes({
       description: h.description,
       country: h.country,
       imageUrls: homeUrls,
-      isInFavoriteList: (h.Favorite[0]?.id ?? null) !== null,
+      isInFavoriteList: user?.id
+        ? (h.Favorite[0]?.id ?? null) !== null
+        : false,
     };
   });
 }

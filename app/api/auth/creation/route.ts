@@ -1,40 +1,28 @@
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "@/app/lib/db";
 import { NextResponse } from "next/server";
-import { unstable_noStore as noStore } from "next/cache";
 
-export async function GET() {
-  noStore();
+export async function GET(request: Request) {
   const { getUser } = getKindeServerSession();
-
   const user = await getUser();
 
-  if (!user || user === null || !user.id) {
+  if (!user?.id) {
     throw new Error("Something went wrong, i am sorry....");
   }
 
-  let dbUser = await prisma.user.findUnique({
-    where: {
+  await prisma.user.upsert({
+    where: { id: user.id },
+    create: {
       id: user.id,
+      email: user.email ?? "",
+      firstName: user.given_name ?? "",
+      lastName: user.family_name ?? "",
+      profileImage:
+        user.picture ?? `https://avatar.vercel.sh/${user.given_name}`,
     },
+    update: {},
   });
 
-  if (!dbUser) {
-    dbUser = await prisma.user.create({
-      data: {
-        id: user.id,
-        email: user.email ?? "",
-        firstName: user.given_name ?? "",
-        lastName: user.family_name ?? "",
-        profileImage:
-          user.picture ?? `https://avatar.vercel.sh/${user.given_name}`,
-      },
-    });
-  }
-
-  return NextResponse.redirect(
-    process.env.NODE_ENV === "development"
-      ? "http://localhost:3000"
-      : "https://airbnb-clone-bz.vercel.app",
-  );
+  const base = process.env.KINDE_SITE_URL ?? new URL("/", request.url).origin;
+  return NextResponse.redirect(new URL("/", base));
 }

@@ -4,11 +4,11 @@ import { getImageUrls } from "@/app/lib/supabase/storage";
 import { AdminDeleteHomeButton } from "@/app/components/admin/AdminDeleteHomeButton";
 import { AdminImageRow } from "@/app/components/admin/AdminImageRow";
 import { getCountryByValue } from "@/app/lib/getCountries";
-import { unstable_noStore as noStore } from "next/cache";
+import { connection } from "next/server";
 
 export default async function AdminHomes() {
   await requireAdmin();
-  noStore();
+  await connection();
 
   const homes = await prisma.home.findMany({
     orderBy: { createdAT: "desc" },

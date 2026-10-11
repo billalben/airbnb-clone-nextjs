@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
 import Link from "next/link";
+import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Pencil } from "lucide-react";
 
@@ -46,6 +47,57 @@ async function getData(homeId: string) {
   });
 
   return data;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const home = await prisma.home.findUnique({
+    where: { id },
+    select: {
+      title: true,
+      description: true,
+      images: {
+        orderBy: [{ isPrimary: "desc" }, { position: "asc" }],
+        take: 1,
+        select: { path: true },
+      },
+    },
+  });
+
+  if (!home) {
+    return { title: "Home not found" };
+  }
+
+  const title = home.title ?? "Home";
+  const description =
+    home.description?.slice(0, 160) ??
+    "Book this unique stay on Airbnb Clone.";
+  const imageUrls = home.images.length
+    ? (await getImageUrls(home.images.map((i) => i.path))).filter(
+        (u): u is string => Boolean(u),
+      )
+    : [];
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      images: imageUrls,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: imageUrls,
+    },
+  };
 }
 
 export default async function HomeRoute({

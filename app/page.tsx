@@ -49,7 +49,7 @@ async function getData(
         select: { path: true },
       },
       Favorite: {
-        where: { userId: userId ?? undefined },
+        where: { userId: userId ?? "" },
         select: { id: true },
         take: 1,
       },
@@ -69,7 +69,9 @@ async function getData(
       description: h.description,
       country: h.country,
       imageUrls: homeUrls,
-      isInFavoriteList: (h.Favorite[0]?.id ?? null) !== null,
+      isInFavoriteList: userId
+        ? (h.Favorite[0]?.id ?? null) !== null
+        : false,
     };
   });
 }

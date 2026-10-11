@@ -1,13 +1,12 @@
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { ListingCardClient } from "../components/ListingCardClient";
 import { NoItems } from "../components/NoItem";
 import prisma from "../lib/db";
-import { redirect } from "next/navigation";
-import { unstable_noStore as noStore } from "next/cache";
+import { requireUser } from "../lib/auth";
+import { connection } from "next/server";
 import { getImageUrls } from "../lib/supabase/storage";
 
 async function getData(userId: string) {
-  noStore();
+  await connection();
   const data = await prisma.reservation.findMany({
     where: { userId },
     select: {
@@ -32,9 +31,7 @@ async function getData(userId: string) {
 }
 
 export default async function ReservationsRoute() {
-  const { getUser } = getKindeServerSession();
-  const user = await getUser();
-  if (!user?.id) return redirect("/");
+  const user = await requireUser();
   const data = await getData(user.id);
 
   const allPaths = data.flatMap(

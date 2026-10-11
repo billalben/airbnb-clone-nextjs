@@ -9,9 +9,32 @@ import { ToastFlash } from "@/components/toast-flash";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
+const siteUrl = process.env.KINDE_SITE_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "Airbnb Clone",
-  description: "Airbnb Clone",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Airbnb Clone",
+    template: "%s | Airbnb Clone",
+  },
+  description: "Find and book unique homes and experiences around the world.",
+  openGraph: {
+    type: "website",
+    siteName: "Airbnb Clone",
+    title: "Airbnb Clone",
+    description: "Find and book unique homes and experiences around the world.",
+    images: ["/airbnb-desktop.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Airbnb Clone",
+    description: "Find and book unique homes and experiences around the world.",
+    images: ["/airbnb-desktop.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({

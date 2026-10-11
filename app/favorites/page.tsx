@@ -1,9 +1,8 @@
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { ListingCardClient } from "../components/ListingCardClient";
 import { NoItems } from "../components/NoItem";
 import prisma from "../lib/db";
-import { redirect } from "next/navigation";
-import { unstable_noStore as noStore } from "next/cache";
+import { requireUser } from "../lib/auth";
+import { connection } from "next/server";
 import { getImageUrls } from "../lib/supabase/storage";
 
 type FavoriteGridItem = {
@@ -17,7 +16,7 @@ type FavoriteGridItem = {
 };
 
 async function getData(userId: string): Promise<FavoriteGridItem[]> {
-  noStore();
+  await connection();
   const data = await prisma.favorite.findMany({
     where: { userId },
     select: {
@@ -67,9 +66,7 @@ async function getData(userId: string): Promise<FavoriteGridItem[]> {
 }
 
 export default async function FavoriteRoute() {
-  const { getUser } = getKindeServerSession();
-  const user = await getUser();
-  if (!user) return redirect("/");
+  const user = await requireUser();
   const items = await getData(user.id);
 
   return (

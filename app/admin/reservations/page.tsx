@@ -1,12 +1,12 @@
 import { requireAdmin } from "@/app/lib/auth";
 import prisma from "@/app/lib/db";
 import { AdminDeleteReservationButton } from "@/app/components/admin/AdminDeleteReservationButton";
-import { unstable_noStore as noStore } from "next/cache";
+import { connection } from "next/server";
 import { dateRangeLabel } from "@/app/lib/format";
 
 export default async function AdminReservations() {
   await requireAdmin();
-  noStore();
+  await connection();
 
   const reservations = await prisma.reservation.findMany({
     orderBy: { startDate: "desc" },

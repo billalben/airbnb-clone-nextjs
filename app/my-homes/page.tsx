@@ -1,17 +1,16 @@
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "../lib/db";
-import { redirect } from "next/navigation";
+import { requireUser } from "../lib/auth";
 import { NoItems } from "../components/NoItem";
 import { ListingCardClient } from "../components/ListingCardClient";
 import { DeleteHomeButton } from "../components/DeleteHomeButton";
-import { unstable_noStore as noStore } from "next/cache";
+import { connection } from "next/server";
 import { getImageUrls } from "../lib/supabase/storage";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 
 async function getData(userId: string) {
-  noStore();
+  await connection();
   const data = await prisma.home.findMany({
     where: {
       userId: userId,
@@ -46,12 +45,7 @@ async function getData(userId: string) {
 }
 
 export default async function MyHomes() {
-  const { getUser } = getKindeServerSession();
-  const user = await getUser();
-
-  if (!user) {
-    return redirect("/");
-  }
+  const user = await requireUser();
   const data = await getData(user.id);
   const allPaths = data.flatMap((h) => h.images.map((i) => i.path));
   const urls = await getImageUrls(allPaths);
