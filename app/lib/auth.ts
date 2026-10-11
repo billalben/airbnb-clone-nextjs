@@ -52,6 +52,25 @@ export async function canEditHome(homeId: string) {
   return { home, user };
 }
 
+// Owner OR admin. Used for photo management so admins can curate any listing
+// from the admin panel, while home details stay owner-only via canEditHome.
+export async function canManageHome(homeId: string) {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  const home = await prisma.home.findUnique({
+    where: { id: homeId },
+    select: { id: true, userId: true },
+  });
+  if (!home) return null;
+
+  const isOwner = home.userId === user.id;
+  const isAdmin = user.role === "ADMIN";
+  if (!isOwner && !isAdmin) return null;
+
+  return { home, user, isAdmin };
+}
+
 export async function canDeleteHome(homeId: string) {
   const user = await getCurrentUser();
   if (!user) return null;

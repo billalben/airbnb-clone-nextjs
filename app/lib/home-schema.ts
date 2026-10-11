@@ -61,6 +61,38 @@ export const newImageFileSchema = z
 
 export const MAX_NEW_IMAGES_PER_SAVE = 10;
 
+export const updateHomeImagesSchema = z.object({
+  newImageFiles: z.array(newImageFileSchema).max(MAX_NEW_IMAGES_PER_SAVE),
+  deleteImageIds: z.array(z.string().min(1)).max(MAX_IMAGES_PER_HOME),
+  primaryImageKey: z.string().min(1).nullable(),
+});
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+// The calendar only hides past days client-side, and the submitted date is the
+// guest's local midnight. Allow the current UTC day and the previous one so
+// guests ahead of UTC are not rejected for booking "today".
+function isNotBeforeYesterday(date: Date): boolean {
+  const floor = new Date();
+  floor.setUTCHours(0, 0, 0, 0);
+  return date.getTime() >= floor.getTime() - ONE_DAY_MS;
+}
+
+export const reservationSchema = z
+  .object({
+    homeId: z.string().uuid("Invalid home."),
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date(),
+  })
+  .refine((data) => data.endDate.getTime() > data.startDate.getTime(), {
+    message: "Check-out must be after check-in.",
+    path: ["endDate"],
+  })
+  .refine((data) => isNotBeforeYesterday(data.startDate), {
+    message: "Check-in cannot be in the past.",
+    path: ["startDate"],
+  });
+
 export const stepFields = {
   category: ["categoryName"] as const,
   image: ["image"] as const,

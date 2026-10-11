@@ -7,9 +7,11 @@ const EXTENSION_BY_MIME: Record<string, string> = {
 };
 
 export function getFileExtension(file: File): string {
-  const fromName = file.name.split(".").pop()?.toLowerCase();
-  if (fromName && fromName.length <= 5) return fromName;
-  return EXTENSION_BY_MIME[file.type] ?? "jpg";
+  const extension = EXTENSION_BY_MIME[file.type];
+  if (!extension) {
+    throw new Error("Unsupported image type.");
+  }
+  return extension;
 }
 
 function getBucket(): string {

@@ -1,7 +1,10 @@
 import { HomeFormWizard } from "@/app/components/home-form/HomeFormWizard";
 import { createHome } from "@/app/actions";
+import { requireUser } from "@/app/lib/auth";
 
-export default function CreateHomePage() {
+export default async function CreateHomePage() {
+  await requireUser();
+
   return (
     <div className="container mt-10">
       <div className="mb-10">

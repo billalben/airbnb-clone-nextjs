@@ -25,14 +25,12 @@ export function AdminImageRow({
     formData.set("homeId", homeId);
     formData.set("imageId", imageId);
     startTransition(async () => {
-      try {
-        await setPrimaryImage(formData);
-        toast.success("Primary photo updated");
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Could not update primary photo.",
-        );
+      const result = await setPrimaryImage(formData);
+      if (!result.ok) {
+        toast.error(result.message ?? "Could not update primary photo.");
+        return;
       }
+      toast.success("Primary photo updated");
     });
   };
 
@@ -41,14 +39,12 @@ export function AdminImageRow({
     formData.set("homeId", homeId);
     formData.set("imageId", imageId);
     startTransition(async () => {
-      try {
-        await deleteHomeImage(formData);
-        toast.success("Photo removed");
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Could not delete photo.",
-        );
+      const result = await deleteHomeImage(formData);
+      if (!result.ok) {
+        toast.error(result.message ?? "Could not delete photo.");
+        return;
       }
+      toast.success("Photo removed");
     });
   };
 

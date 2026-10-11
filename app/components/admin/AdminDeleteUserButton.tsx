@@ -30,14 +30,12 @@ export function AdminDeleteUserButton({
         const formData = new FormData();
         formData.set("userId", userId);
         startTransition(async () => {
-          try {
-            await deleteUser(formData);
-            toast.success("User deleted");
-          } catch (err) {
-            toast.error(
-              err instanceof Error ? err.message : "Could not delete user.",
-            );
+          const result = await deleteUser(formData);
+          if (!result.ok) {
+            toast.error(result.message ?? "Could not delete user.");
+            return;
           }
+          toast.success("User deleted");
         });
       }}
     >

@@ -8,6 +8,7 @@ import prisma from "./lib/db";
 import {
   canDeleteHome,
   canEditHome,
+  canManageHome,
   requireAdmin,
   requireUser,
 } from "./lib/auth";
@@ -21,12 +22,17 @@ import {
   kindeManagementEnabled,
 } from "./lib/kinde-management";
 import {
-  ACCEPTED_IMAGE_TYPES,
-  MAX_IMAGE_BYTES,
   MAX_IMAGES_PER_HOME,
   homeEditFormSchema,
   homeFormSchema,
+  reservationSchema,
+  updateHomeImagesSchema,
 } from "./lib/home-schema";
+import {
+  parseCount,
+  parseCountry,
+  parseFilter,
+} from "./lib/parseSearchParams";
 
 type ActionResult =
   | { ok: true }
@@ -223,18 +229,6 @@ export async function updateHome(
   return result;
 }
 
-function validateImage(file: File) {
-  if (!file || file.size === 0) {
-    throw new Error("Please select an image.");
-  }
-  if (file.size > MAX_IMAGE_BYTES) {
-    throw new Error("Image must be 5MB or smaller.");
-  }
-  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-    throw new Error("Image must be JPEG, PNG, or WEBP.");
-  }
-}
-
 // ---------------- Favorites ----------------
 
 export async function addToFavorite(formData: FormData) {
@@ -283,13 +277,15 @@ export async function DeleteFromFavorite(formData: FormData) {
   revalidatePath(pathName);
 }
 
-export async function toggleFavorite(formData: FormData) {
+export async function toggleFavorite(
+  formData: FormData,
+): Promise<ActionResult> {
   const user = await requireUser();
   const homeId = formData.get("homeId") as string;
   const pathName = formData.get("pathName") as string;
 
   if (!homeId || !pathName) {
-    throw new Error("Home ID and Path Name are required.");
+    return { ok: false, message: "Could not update favorites." };
   }
 
   const existing = await prisma.favorite.findFirst({
@@ -311,11 +307,15 @@ export async function toggleFavorite(formData: FormData) {
         err && typeof err === "object" && "code" in err
           ? (err as { code?: string }).code
           : undefined;
-      if (code !== "P2002") throw err;
+      if (code !== "P2002") {
+        console.error("[toggleFavorite] failed:", err);
+        return { ok: false, message: "Could not update favorites." };
+      }
     }
   }
 
   revalidatePath(pathName);
+  return { ok: true };
 }
 
 // ---------------- Pagination: load more homes ----------------
@@ -338,6 +338,8 @@ export type LoadMoreHomeItem = {
   isInFavoriteList: boolean;
 };
 
+const MAX_SKIP = 10000;
+
 export async function loadMoreHomes({
   skip,
   filter,
@@ -348,6 +350,10 @@ export async function loadMoreHomes({
 }: { skip: number } & LoadMoreHomesFilters): Promise<LoadMoreHomeItem[]> {
   await connection();
 
+  if (!Number.isInteger(skip) || skip < 0 || skip > MAX_SKIP) {
+    return [];
+  }
+
   const { getUser } = getKindeServerSession();
   const user = await getUser();
 
@@ -356,11 +362,11 @@ export async function loadMoreHomes({
       addedCategory: true,
       addedLocation: true,
       addedDescription: true,
-      categoryName: filter,
-      country,
-      guests: guest,
-      bedrooms: room,
-      bathrooms: bathroom,
+      categoryName: parseFilter(filter),
+      country: parseCountry(country),
+      guests: parseCount(guest),
+      bedrooms: parseCount(room),
+      bathrooms: parseCount(bathroom),
     },
     orderBy: { createdAT: "desc" },
     skip,
@@ -405,20 +411,54 @@ export async function loadMoreHomes({
 
 export async function createReservation(formData: FormData) {
   const user = await requireUser();
-  const homeId = formData.get("homeId") as string;
-  const startDate = formData.get("startDate") as string;
-  const endDate = formData.get("endDate") as string;
+  const rawHomeId = formData.get("homeId")?.toString() ?? "";
 
-  if (!homeId || !startDate || !endDate) {
-    throw new Error("Home ID, Start Date, and End Date are required.");
+  const parsed = reservationSchema.safeParse({
+    homeId: rawHomeId,
+    startDate: formData.get("startDate")?.toString() ?? "",
+    endDate: formData.get("endDate")?.toString() ?? "",
+  });
+
+  if (!parsed.success) {
+    redirect(
+      rawHomeId
+        ? `/home/${rawHomeId}?toast=reservation_invalid_dates`
+        : "/",
+    );
+  }
+
+  const { homeId, startDate, endDate } = parsed.data;
+
+  const home = await prisma.home.findUnique({
+    where: { id: homeId },
+    select: { id: true, userId: true },
+  });
+  if (!home) {
+    redirect("/?toast=reservation_error");
+  }
+
+  if (home.userId === user.id) {
+    redirect(`/home/${home.id}?toast=reservation_own_home`);
+  }
+
+  const overlap = await prisma.reservation.findFirst({
+    where: {
+      homeId: home.id,
+      startDate: { lt: endDate },
+      endDate: { gt: startDate },
+    },
+    select: { id: true },
+  });
+  if (overlap) {
+    redirect(`/home/${home.id}?toast=reservation_unavailable`);
   }
 
   await prisma.reservation.create({
     data: {
       userId: user.id,
-      endDate,
+      homeId: home.id,
       startDate,
-      homeId,
+      endDate,
     },
   });
 
@@ -427,12 +467,12 @@ export async function createReservation(formData: FormData) {
 
 // ---------------- Delete home ----------------
 
-export async function deleteHome(formData: FormData) {
+export async function deleteHome(formData: FormData): Promise<ActionResult> {
   const homeId = formData.get("homeId") as string;
-  if (!homeId) throw new Error("Home ID is required.");
+  if (!homeId) return { ok: false, message: "Home ID is required." };
 
   const edit = await canDeleteHome(homeId);
-  if (!edit) throw new Error("Not allowed.");
+  if (!edit) return { ok: false, message: "Not allowed." };
 
   const images = await prisma.homeImage.findMany({
     where: { homeId },
@@ -440,7 +480,12 @@ export async function deleteHome(formData: FormData) {
   });
   const paths = images.map((i) => i.path);
 
-  await prisma.home.delete({ where: { id: homeId } });
+  try {
+    await prisma.home.delete({ where: { id: homeId } });
+  } catch (err) {
+    console.error("[deleteHome] delete failed:", err);
+    return { ok: false, message: "Could not delete home." };
+  }
 
   try {
     await deleteHomeImages(paths);
@@ -451,7 +496,7 @@ export async function deleteHome(formData: FormData) {
   revalidatePath("/my-homes");
   revalidatePath("/admin/homes");
   revalidatePath("/");
-  redirect("/my-homes?toast=home_deleted");
+  return { ok: true };
 }
 
 // ---------------- Home images (owner only) ----------------
@@ -469,11 +514,12 @@ export async function updateHomeImages(
     return { ok: false, message: "Not allowed." };
   }
 
-  const { newImageFiles, deleteImageIds, primaryImageKey } = payload;
-
-  for (const file of newImageFiles) {
-    validateImage(file);
+  const parsedPayload = updateHomeImagesSchema.safeParse(payload);
+  if (!parsedPayload.success) {
+    return { ok: false, message: "Invalid photo data." };
   }
+
+  const { newImageFiles, deleteImageIds, primaryImageKey } = parsedPayload.data;
 
   const existingImages = await prisma.homeImage.findMany({
     where: { homeId },
@@ -593,24 +639,32 @@ export async function updateHomeImages(
   return { ok: true };
 }
 
-export async function deleteHomeImage(formData: FormData) {
+export async function deleteHomeImage(
+  formData: FormData,
+): Promise<ActionResult> {
   const imageId = formData.get("imageId") as string;
   const homeId = formData.get("homeId") as string;
-  if (!imageId || !homeId)
-    throw new Error("Image ID and Home ID are required.");
+  if (!imageId || !homeId) {
+    return { ok: false, message: "Image ID and Home ID are required." };
+  }
 
-  const edit = await canEditHome(homeId);
-  if (!edit) throw new Error("Not allowed.");
+  const edit = await canManageHome(homeId);
+  if (!edit) return { ok: false, message: "Not allowed." };
 
   const image = await prisma.homeImage.findUnique({
     where: { id: imageId },
     select: { id: true, path: true, isPrimary: true, homeId: true },
   });
   if (!image || image.homeId !== homeId) {
-    throw new Error("Image not found.");
+    return { ok: false, message: "Image not found." };
   }
 
-  await prisma.homeImage.delete({ where: { id: imageId } });
+  try {
+    await prisma.homeImage.delete({ where: { id: imageId } });
+  } catch (err) {
+    console.error("[deleteHomeImage] delete failed:", err);
+    return { ok: false, message: "Could not delete photo." };
+  }
 
   if (image.isPrimary) {
     const next = await prisma.homeImage.findFirst({
@@ -637,41 +691,51 @@ export async function deleteHomeImage(formData: FormData) {
   revalidatePath(`/my-homes/${homeId}/edit`);
   revalidatePath(`/home/${homeId}`);
   revalidatePath("/");
+  return { ok: true };
 }
 
-export async function setPrimaryImage(formData: FormData) {
+export async function setPrimaryImage(
+  formData: FormData,
+): Promise<ActionResult> {
   const imageId = formData.get("imageId") as string;
   const homeId = formData.get("homeId") as string;
-  if (!imageId || !homeId)
-    throw new Error("Image ID and Home ID are required.");
+  if (!imageId || !homeId) {
+    return { ok: false, message: "Image ID and Home ID are required." };
+  }
 
-  const edit = await canEditHome(homeId);
-  if (!edit) throw new Error("Not allowed.");
+  const edit = await canManageHome(homeId);
+  if (!edit) return { ok: false, message: "Not allowed." };
 
   const image = await prisma.homeImage.findUnique({
     where: { id: imageId },
     select: { id: true, homeId: true },
   });
   if (!image || image.homeId !== homeId) {
-    throw new Error("Image not found.");
+    return { ok: false, message: "Image not found." };
   }
 
-  await prisma.$transaction([
-    prisma.homeImage.updateMany({
-      where: { homeId },
-      data: { isPrimary: false },
-    }),
-    prisma.homeImage.update({
-      where: { id: imageId },
-      data: { isPrimary: true },
-    }),
-  ]);
+  try {
+    await prisma.$transaction([
+      prisma.homeImage.updateMany({
+        where: { homeId },
+        data: { isPrimary: false },
+      }),
+      prisma.homeImage.update({
+        where: { id: imageId },
+        data: { isPrimary: true },
+      }),
+    ]);
+  } catch (err) {
+    console.error("[setPrimaryImage] update failed:", err);
+    return { ok: false, message: "Could not update primary photo." };
+  }
 
   revalidatePath(`/my-homes/${homeId}/edit`);
   revalidatePath(`/home/${homeId}`);
   revalidatePath("/my-homes");
   revalidatePath("/admin/homes");
   revalidatePath("/");
+  return { ok: true };
 }
 
 // ---------------- Admin actions ----------------
@@ -689,11 +753,13 @@ async function collectUserHomeImagePaths(userId: string): Promise<string[]> {
   return images.map((i) => i.path);
 }
 
-export async function deleteUser(formData: FormData) {
+export async function deleteUser(formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
   const userId = formData.get("userId") as string;
-  if (!userId) throw new Error("User ID is required.");
-  if (userId === admin.id) throw new Error("You cannot delete yourself.");
+  if (!userId) return { ok: false, message: "User ID is required." };
+  if (userId === admin.id) {
+    return { ok: false, message: "You cannot delete yourself." };
+  }
 
   const paths = await collectUserHomeImagePaths(userId);
 
@@ -701,12 +767,8 @@ export async function deleteUser(formData: FormData) {
     try {
       await deleteKindeUser(userId);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(`[deleteUser] Kinde delete failed for ${userId}:`, message);
-      throw new Error(
-        `Could not delete user in Kinde. Local delete aborted. ${message}\n` +
-          `Fix: Kinde dashboard → M2M app → API → enable Kinde Management API.`,
-      );
+      console.error(`[deleteUser] Kinde delete failed for ${userId}:`, err);
+      return { ok: false, message: "Could not delete user. Please try again." };
     }
   } else {
     console.warn(
@@ -715,7 +777,9 @@ export async function deleteUser(formData: FormData) {
   }
 
   const result = await prisma.user.deleteMany({ where: { id: userId } });
-  if (result.count === 0) return;
+  if (result.count === 0) {
+    return { ok: false, message: "User not found." };
+  }
 
   if (paths.length > 0) {
     try {
@@ -732,13 +796,26 @@ export async function deleteUser(formData: FormData) {
   revalidatePath("/my-homes");
   revalidatePath("/favorites");
   revalidatePath("/reservations");
+  return { ok: true };
 }
 
-export async function deleteReservation(formData: FormData) {
+export async function deleteReservation(
+  formData: FormData,
+): Promise<ActionResult> {
   await requireAdmin();
   const reservationId = formData.get("reservationId") as string;
-  if (!reservationId) throw new Error("Reservation ID is required.");
-  await prisma.reservation.delete({ where: { id: reservationId } });
+  if (!reservationId) {
+    return { ok: false, message: "Reservation ID is required." };
+  }
+
+  try {
+    await prisma.reservation.delete({ where: { id: reservationId } });
+  } catch (err) {
+    console.error("[deleteReservation] delete failed:", err);
+    return { ok: false, message: "Could not delete reservation." };
+  }
+
   revalidatePath("/admin/reservations");
   revalidatePath("/reservations");
+  return { ok: true };
 }

@@ -17,7 +17,7 @@ export function FavoriteButton({
   userId: string;
   pathName: string;
   initialIsFav: boolean;
-  toggleAction: (formData: FormData) => Promise<unknown>;
+  toggleAction: (formData: FormData) => Promise<{ ok: boolean; message?: string }>;
 }) {
   const [pending, startTransition] = useTransition();
   const [isFav, setIsFav] = useState(initialIsFav);
@@ -30,7 +30,11 @@ export function FavoriteButton({
     setIsFav(!wasFav);
     startTransition(async () => {
       try {
-        await toggleAction(formData);
+        const result = await toggleAction(formData);
+        if (!result.ok) {
+          setIsFav(wasFav);
+          toast.error(result.message ?? "Could not update favorites. Please try again.");
+        }
       } catch (err) {
         console.error("[toggleFavorite]", err);
         setIsFav(wasFav);

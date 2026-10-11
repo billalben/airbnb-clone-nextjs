@@ -23,16 +23,12 @@ export function AdminDeleteReservationButton({
         const formData = new FormData();
         formData.set("reservationId", reservationId);
         startTransition(async () => {
-          try {
-            await deleteReservation(formData);
-            toast.success("Reservation deleted");
-          } catch (err) {
-            toast.error(
-              err instanceof Error
-                ? err.message
-                : "Could not delete reservation.",
-            );
+          const result = await deleteReservation(formData);
+          if (!result.ok) {
+            toast.error(result.message ?? "Could not delete reservation.");
+            return;
           }
+          toast.success("Reservation deleted");
         });
       }}
     >

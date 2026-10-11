@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,18 +29,20 @@ export function DeleteHomeButton({
 }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   const onConfirm = () => {
     const formData = new FormData();
     formData.set("homeId", homeId);
     startTransition(async () => {
-      try {
-        await deleteHome(formData);
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : "Could not delete home.",
-        );
+      const result = await deleteHome(formData);
+      if (!result.ok) {
+        toast.error(result.message ?? "Could not delete home.");
+        return;
       }
+      setOpen(false);
+      router.push("/my-homes?toast=home_deleted");
+      router.refresh();
     });
   };
 

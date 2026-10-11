@@ -2,12 +2,14 @@
 
 import { Trash2, Loader2 } from "lucide-react";
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { deleteHome } from "../../actions";
 
 export function AdminDeleteHomeButton({ homeId }: { homeId: string }) {
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
   return (
     <Button
       type="button"
@@ -19,13 +21,13 @@ export function AdminDeleteHomeButton({ homeId }: { homeId: string }) {
         const formData = new FormData();
         formData.set("homeId", homeId);
         startTransition(async () => {
-          try {
-            await deleteHome(formData);
-          } catch (err) {
-            toast.error(
-              err instanceof Error ? err.message : "Could not delete home.",
-            );
+          const result = await deleteHome(formData);
+          if (!result.ok) {
+            toast.error(result.message ?? "Could not delete home.");
+            return;
           }
+          toast.success("Home deleted");
+          router.refresh();
         });
       }}
     >

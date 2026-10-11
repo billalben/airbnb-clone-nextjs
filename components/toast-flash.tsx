@@ -12,6 +12,13 @@ const TOAST_MESSAGES: Record<string, string> = {
   reservation_created: "Reservation confirmed",
 };
 
+const ERROR_TOAST_MESSAGES: Record<string, string> = {
+  reservation_invalid_dates: "Please pick a valid check-in and check-out range.",
+  reservation_unavailable: "Those dates are already booked.",
+  reservation_own_home: "You cannot book your own home.",
+  reservation_error: "Could not create your reservation. Please try again.",
+};
+
 export function ToastFlash() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -21,11 +28,16 @@ export function ToastFlash() {
   useEffect(() => {
     const key = searchParams.get("toast");
     if (!key || fired.current) return;
-    const message = TOAST_MESSAGES[key];
-    if (!message) return;
+    const successMessage = TOAST_MESSAGES[key];
+    const errorMessage = ERROR_TOAST_MESSAGES[key];
+    if (!successMessage && !errorMessage) return;
 
     fired.current = true;
-    toast.success(message);
+    if (errorMessage) {
+      toast.error(errorMessage);
+    } else {
+      toast.success(successMessage);
+    }
 
     const next = new URLSearchParams(searchParams.toString());
     next.delete("toast");

@@ -226,8 +226,8 @@ export function HomePhotosEditor({
         toast.error(message);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      const finalMessage = message || "Failed to save changes.";
+      console.error("[HomePhotosEditor] save failed:", err);
+      const finalMessage = "Failed to save changes.";
       setError(finalMessage);
       toast.error(finalMessage);
     } finally {
