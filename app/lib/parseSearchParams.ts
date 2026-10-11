@@ -25,24 +25,37 @@ export function parseCountry(
   return validCountries.has(value) ? value : undefined;
 }
 
+export function clampCount(value: number, max = 10): number {
+  return Math.max(0, Math.min(max, Math.trunc(value)));
+}
+
 export function parseCount(
   raw: string | string[] | undefined,
   max = 10,
-): string | undefined {
+): number | undefined {
   const value = firstString(raw);
   if (!value) return undefined;
   const n = Number.parseInt(value, 10);
   if (!Number.isFinite(n)) return undefined;
-  const clamped = Math.max(0, Math.min(max, n));
-  return String(clamped);
+  return clampCount(n, max);
+}
+
+// Re-clamp a numeric filter argument received by a server action so callers
+// cannot bypass validation by invoking the action directly.
+export function clampCountArg(
+  raw: number | undefined,
+  max = 10,
+): number | undefined {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) return undefined;
+  return clampCount(raw, max);
 }
 
 export type ParsedSearchParams = {
   filter?: string;
   country?: string;
-  guest?: string;
-  room?: string;
-  bathroom?: string;
+  guest?: number;
+  room?: number;
+  bathroom?: number;
 };
 
 export function parseSearchParams(

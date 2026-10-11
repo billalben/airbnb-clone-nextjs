@@ -24,9 +24,9 @@ export type HomeFormDefaults = {
   title?: string | null;
   description?: string | null;
   price?: number | null;
-  guests?: string | null;
-  bedrooms?: string | null;
-  bathrooms?: string | null;
+  guests?: number | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
   country?: string | null;
 };
 

@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
-  output   = "../lib/generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../lib/generated/prisma"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -30,9 +31,9 @@ model Home {
 
   title        String?
   description  String?
-  guests       String?
-  bedrooms     String?
-  bathrooms    String?
+  guests       Int
+  bedrooms     Int
+  bathrooms    Int
   country      String?
   price        Int?
   categoryName String?
@@ -44,9 +45,13 @@ model Home {
   addedLocation    Boolean @default(false)
 
   createdAT DateTime @default(now())
-  User      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId    String?
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
   images    HomeImage[]
+
+  @@index([createdAT(sort: Desc)])
+  @@index([categoryName])
+  @@index([country])
 }
 
 model HomeImage {
@@ -59,15 +64,16 @@ model HomeImage {
   Home      Home     @relation(fields: [homeId], references: [id], onDelete: Cascade)
 
   @@index([homeId])
+  @@unique([homeId], where: { isPrimary: true })
 }
 
 model Favorite {
   id String @id @default(uuid())
 
-  User   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String?
-  Home   Home?   @relation(fields: [homeId], references: [id], onDelete: Cascade)
-  homeId String?
+  User   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  Home   Home   @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  homeId String
 
   createAt DateTime @default(now())
 
@@ -81,8 +87,11 @@ model Reservation {
   endDate   DateTime
   createdAt DateTime @default(now())
 
-  User   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId String?
-  Home   Home?   @relation(fields: [homeId], references: [id], onDelete: Cascade)
-  homeId String?
+  User   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  Home   Home   @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  homeId String
+
+  @@index([homeId])
+  @@index([userId])
 }

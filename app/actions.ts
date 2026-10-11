@@ -29,7 +29,7 @@ import {
   updateHomeImagesSchema,
 } from "./lib/home-schema";
 import {
-  parseCount,
+  clampCountArg,
   parseCountry,
   parseFilter,
 } from "./lib/parseSearchParams";
@@ -104,9 +104,9 @@ async function finalizeHomeSubmission({
     description: values.description,
     price: values.price,
     country: values.country,
-    guests: String(values.guests),
-    bedrooms: String(values.bedrooms),
-    bathrooms: String(values.bathrooms),
+    guests: values.guests,
+    bedrooms: values.bedrooms,
+    bathrooms: values.bathrooms,
     addedCategory: true,
     addedDescription: true,
     addedLocation: true,
@@ -323,9 +323,9 @@ export async function toggleFavorite(
 export type LoadMoreHomesFilters = {
   filter?: string;
   country?: string;
-  guest?: string;
-  room?: string;
-  bathroom?: string;
+  guest?: number;
+  room?: number;
+  bathroom?: number;
 };
 
 export type LoadMoreHomeItem = {
@@ -364,9 +364,9 @@ export async function loadMoreHomes({
       addedDescription: true,
       categoryName: parseFilter(filter),
       country: parseCountry(country),
-      guests: parseCount(guest),
-      bedrooms: parseCount(room),
-      bathrooms: parseCount(bathroom),
+      guests: clampCountArg(guest),
+      bedrooms: clampCountArg(room),
+      bathrooms: clampCountArg(bathroom),
     },
     orderBy: { createdAT: "desc" },
     skip,
