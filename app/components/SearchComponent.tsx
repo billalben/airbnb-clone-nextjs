@@ -14,7 +14,7 @@ import { ArrowLeft, Bath, Bed, Globe, Search, Users, X } from "lucide-react";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { getCountryByValue } from "../lib/getCountries";
+import { getCountryOption } from "../lib/countries-client";
 import { Button } from "@/components/ui/button";
 import { CreationSubmit } from "./SubmitButtons";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -33,7 +33,7 @@ export function SearchModalComponent() {
   const hasFilter = Boolean(
     countryParam || guestParam || roomParam || bathroomParam,
   );
-  const country = countryParam ? getCountryByValue(countryParam) : null;
+  const country = countryParam ? getCountryOption(countryParam) : null;
 
   return (
     <Dialog>

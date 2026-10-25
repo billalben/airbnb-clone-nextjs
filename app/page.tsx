@@ -1,31 +1,21 @@
 import { Suspense } from "react";
 
 import { MapFilterItems } from "./components/MapFilterItems";
-import prisma from "./lib/db";
 import { SkeltonCard } from "./components/SkeletonCard";
 import { NoItems } from "./components/NoItem";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { HomeGrid } from "./components/HomeGrid";
 import { connection } from "next/server";
-import { getImageUrls } from "./lib/supabase/storage";
 import { parseSearchParams } from "./lib/parseSearchParams";
-
-type GridItem = {
-  id: string;
-  title: string | null;
-  price: number | null;
-  description: string | null;
-  country: string | null;
-  imageUrls: (string | null)[];
-  isInFavoriteList: boolean;
-};
+import { findHomeCards } from "./lib/home-cards";
+import type { HomeCardData } from "./lib/home-cards";
 
 async function getData(
   searchParams: ReturnType<typeof parseSearchParams>,
   userId?: string,
-): Promise<GridItem[]> {
+): Promise<HomeCardData[]> {
   await connection();
-  const data = await prisma.home.findMany({
+  return findHomeCards({
     where: {
       addedCategory: true,
       addedLocation: true,
@@ -36,43 +26,8 @@ async function getData(
       bedrooms: searchParams?.room ?? undefined,
       bathrooms: searchParams?.bathroom ?? undefined,
     },
-    orderBy: { createdAT: "desc" },
+    userId,
     take: 10,
-    select: {
-      id: true,
-      title: true,
-      price: true,
-      description: true,
-      country: true,
-      images: {
-        orderBy: [{ isPrimary: "desc" }, { position: "asc" }],
-        select: { path: true },
-      },
-      Favorite: {
-        where: { userId: userId ?? "" },
-        select: { id: true },
-        take: 1,
-      },
-    },
-  });
-
-  const allPaths = data.flatMap((h) => h.images.map((i) => i.path));
-  const urls = await getImageUrls(allPaths);
-  let cursor = 0;
-
-  return data.map((h) => {
-    const homeUrls = h.images.map(() => urls[cursor++] ?? null);
-    return {
-      id: h.id,
-      title: h.title,
-      price: h.price,
-      description: h.description,
-      country: h.country,
-      imageUrls: homeUrls,
-      isInFavoriteList: userId
-        ? (h.Favorite[0]?.id ?? null) !== null
-        : false,
-    };
   });
 }
 

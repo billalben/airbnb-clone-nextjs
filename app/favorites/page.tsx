@@ -3,71 +3,19 @@ import { NoItems } from "../components/NoItem";
 import prisma from "../lib/db";
 import { requireUser } from "../lib/auth";
 import { connection } from "next/server";
-import { getImageUrls } from "../lib/supabase/storage";
-
-type FavoriteGridItem = {
-  id: string;
-  title: string | null;
-  description: string | null;
-  country: string | null;
-  price: number | null;
-  imageUrls: (string | null)[];
-  isInFavoriteList: boolean;
-};
-
-async function getData(userId: string): Promise<FavoriteGridItem[]> {
-  await connection();
-  const data = await prisma.favorite.findMany({
-    where: { userId },
-    select: {
-      id: true,
-      Home: {
-        select: {
-          id: true,
-          title: true,
-          price: true,
-          country: true,
-          description: true,
-          images: {
-            orderBy: [{ isPrimary: "desc" }, { position: "asc" }],
-            select: { path: true },
-          },
-          Favorite: {
-            where: { userId },
-            select: { id: true },
-            take: 1,
-          },
-        },
-      },
-    },
-  });
-
-  const allPaths = data.flatMap(
-    (item) => item.Home?.images.map((i) => i.path) ?? [],
-  );
-  const urls = await getImageUrls(allPaths);
-  let cursor = 0;
-
-  return data
-    .filter((item) => item.Home != null)
-    .map((item) => {
-      const homeUrls =
-        item.Home?.images.map(() => urls[cursor++] ?? null) ?? [];
-      return {
-        id: item.Home!.id,
-        title: item.Home!.title,
-        description: item.Home!.description,
-        country: item.Home!.country,
-        price: item.Home!.price,
-        imageUrls: homeUrls,
-        isInFavoriteList: true,
-      };
-    });
-}
+import { homeCardSelect, toHomeCards } from "../lib/home-cards";
 
 export default async function FavoriteRoute() {
   const user = await requireUser();
-  const items = await getData(user.id);
+  await connection();
+
+  const rows = await prisma.favorite.findMany({
+    where: { userId: user.id },
+    select: {
+      Home: { select: homeCardSelect(user.id) },
+    },
+  });
+  const items = await toHomeCards(rows.map((row) => row.Home));
 
   return (
     <section className="container mx-auto mt-10 px-5 lg:px-10">
@@ -82,7 +30,7 @@ export default async function FavoriteRoute() {
           {items.map((item) => (
             <ListingCardClient
               key={item.id}
-              imageUrls={item.imageUrls}
+              imageUrl={item.imageUrl}
               title={item.title}
               location={item.country}
               price={item.price}

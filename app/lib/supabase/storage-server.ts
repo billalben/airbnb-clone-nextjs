@@ -44,7 +44,6 @@ export async function uploadHomeImage(
     .upload(filePath, file, {
       cacheControl: "216000", // 1 month
       contentType: file.type,
-      upsert: true,
     });
 
   if (error || !data) {

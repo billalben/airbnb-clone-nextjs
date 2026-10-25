@@ -3,57 +3,19 @@ import { NoItems } from "../components/NoItem";
 import prisma from "../lib/db";
 import { requireUser } from "../lib/auth";
 import { connection } from "next/server";
-import { getImageUrls } from "../lib/supabase/storage";
-
-async function getData(userId: string) {
-  await connection();
-  const data = await prisma.reservation.findMany({
-    where: { userId },
-    select: {
-      id: true,
-      Home: {
-        select: {
-          id: true,
-          title: true,
-          country: true,
-          description: true,
-          price: true,
-          Favorite: { select: { id: true }, take: 1 },
-          images: {
-            orderBy: [{ isPrimary: "desc" }, { position: "asc" }],
-            select: { path: true },
-          },
-        },
-      },
-    },
-  });
-  return data;
-}
+import { homeCardSelect, toHomeCards } from "../lib/home-cards";
 
 export default async function ReservationsRoute() {
   const user = await requireUser();
-  const data = await getData(user.id);
+  await connection();
 
-  const allPaths = data.flatMap(
-    (item) => item.Home?.images.map((i) => i.path) ?? [],
-  );
-  const urls = await getImageUrls(allPaths);
-  let cursor = 0;
-  const items = data
-    .filter((item) => item.Home != null)
-    .map((item) => {
-      const homeUrls =
-        item.Home?.images.map(() => urls[cursor++] ?? null) ?? [];
-      return {
-        id: item.Home!.id,
-        title: item.Home!.title,
-        country: item.Home!.country,
-        description: item.Home!.description,
-        price: item.Home!.price,
-        imageUrls: homeUrls,
-        isInFavoriteList: (item.Home!.Favorite[0]?.id ?? null) !== null,
-      };
-    });
+  const rows = await prisma.reservation.findMany({
+    where: { userId: user.id },
+    select: {
+      Home: { select: homeCardSelect(user.id) },
+    },
+  });
+  const items = await toHomeCards(rows.map((row) => row.Home));
 
   return (
     <section className="container mx-auto mt-10 px-5 lg:px-10">
@@ -71,7 +33,7 @@ export default async function ReservationsRoute() {
           {items.map((item) => (
             <ListingCardClient
               key={item.id}
-              imageUrls={item.imageUrls}
+              imageUrl={item.imageUrl}
               title={item.title}
               location={item.country}
               pathName="/reservations"

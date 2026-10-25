@@ -1,67 +1,27 @@
-import prisma from "../lib/db";
 import { requireUser } from "../lib/auth";
 import { NoItems } from "../components/NoItem";
 import { ListingCardClient } from "../components/ListingCardClient";
 import { DeleteHomeButton } from "../components/DeleteHomeButton";
 import { connection } from "next/server";
-import { getImageUrls } from "../lib/supabase/storage";
+import { findHomeCards } from "../lib/home-cards";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 
-async function getData(userId: string) {
+export default async function MyHomes() {
+  const user = await requireUser();
   await connection();
-  const data = await prisma.home.findMany({
+
+  const items = await findHomeCards({
     where: {
-      userId: userId,
+      userId: user.id,
       addedCategory: true,
       addedDescription: true,
       addedLocation: true,
     },
-    select: {
-      id: true,
-      title: true,
-      country: true,
-      description: true,
-      price: true,
-      images: {
-        orderBy: [{ isPrimary: "desc" }, { position: "asc" }],
-        select: { path: true },
-      },
-      Favorite: {
-        where: {
-          userId: userId,
-        },
-        select: { id: true },
-        take: 1,
-      },
-    },
-    orderBy: {
-      createdAT: "desc",
-    },
+    userId: user.id,
   });
 
-  return data;
-}
-
-export default async function MyHomes() {
-  const user = await requireUser();
-  const data = await getData(user.id);
-  const allPaths = data.flatMap((h) => h.images.map((i) => i.path));
-  const urls = await getImageUrls(allPaths);
-  let cursor = 0;
-  const items = data.map((h) => {
-    const homeUrls = h.images.map(() => urls[cursor++] ?? null);
-    return {
-      id: h.id,
-      title: h.title,
-      country: h.country,
-      description: h.description,
-      price: h.price,
-      imageUrls: homeUrls,
-      isInFavoriteList: (h.Favorite[0]?.id ?? null) !== null,
-    };
-  });
   return (
     <section className="container mx-auto mt-10 px-5 lg:px-10">
       <h2 className="text-3xl font-semibold tracking-tight">Your Homes</h2>
@@ -76,7 +36,7 @@ export default async function MyHomes() {
           {items.map((item) => (
             <ListingCardClient
               key={item.id}
-              imageUrls={item.imageUrls}
+              imageUrl={item.imageUrl}
               homeId={item.id}
               title={item.title}
               price={item.price}

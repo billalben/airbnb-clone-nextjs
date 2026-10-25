@@ -16,7 +16,6 @@ import {
   deleteHomeImages,
   uploadHomeImage,
 } from "./lib/supabase/storage-server";
-import { getImageUrls } from "./lib/supabase/storage";
 import {
   deleteKindeUser,
   kindeManagementEnabled,
@@ -33,6 +32,8 @@ import {
   parseCountry,
   parseFilter,
 } from "./lib/parseSearchParams";
+import { findHomeCards } from "./lib/home-cards";
+import type { HomeCardData } from "./lib/home-cards";
 
 type ActionResult =
   | { ok: true }
@@ -122,24 +123,40 @@ async function finalizeHomeSubmission({
     }
 
     if (image && image.size > 0) {
-      const { path } = await uploadHomeImage(existingHomeId, image);
-      const existingCount = await prisma.homeImage.count({
-        where: { homeId: existingHomeId },
-      });
-      await prisma.$transaction([
-        prisma.home.update({
-          where: { id: existingHomeId },
-          data: baseData,
-        }),
-        prisma.homeImage.create({
-          data: {
-            homeId: existingHomeId,
-            path,
-            isPrimary: existingCount === 0,
-            position: existingCount,
-          },
-        }),
-      ]);
+      let uploadedPath: string | null = null;
+      try {
+        const upload = await uploadHomeImage(existingHomeId, image);
+        uploadedPath = upload.path;
+
+        const existingCount = await prisma.homeImage.count({
+          where: { homeId: existingHomeId },
+        });
+        await prisma.$transaction([
+          prisma.home.update({
+            where: { id: existingHomeId },
+            data: baseData,
+          }),
+          prisma.homeImage.create({
+            data: {
+              homeId: existingHomeId,
+              path: upload.path,
+              isPrimary: existingCount === 0,
+              position: existingCount,
+            },
+          }),
+        ]);
+      } catch (err) {
+        console.error("[finalizeHomeSubmission] edit failed:", err);
+        if (uploadedPath) {
+          await deleteHomeImages([uploadedPath]).catch((cleanupError) =>
+            console.error(
+              "[finalizeHomeSubmission] image cleanup failed:",
+              cleanupError,
+            ),
+          );
+        }
+        return { ok: false, message: "Could not update home. Please try again." };
+      }
     } else {
       await prisma.home.update({
         where: { id: existingHomeId },
@@ -168,15 +185,38 @@ async function finalizeHomeSubmission({
     },
   });
 
-  const { path } = await uploadHomeImage(created.id, image);
-  await prisma.homeImage.create({
-    data: {
-      homeId: created.id,
-      path,
-      isPrimary: true,
-      position: 0,
-    },
-  });
+  let uploadedPath: string | null = null;
+  try {
+    const upload = await uploadHomeImage(created.id, image);
+    uploadedPath = upload.path;
+
+    await prisma.homeImage.create({
+      data: {
+        homeId: created.id,
+        path: upload.path,
+        isPrimary: true,
+        position: 0,
+      },
+    });
+  } catch (err) {
+    console.error("[finalizeHomeSubmission] create failed:", err);
+    if (uploadedPath) {
+      await deleteHomeImages([uploadedPath]).catch((cleanupError) =>
+        console.error(
+          "[finalizeHomeSubmission] image cleanup failed:",
+          cleanupError,
+        ),
+      );
+    }
+    await prisma.home.delete({ where: { id: created.id } }).catch(
+      (cleanupError) =>
+        console.error(
+          "[finalizeHomeSubmission] home cleanup failed:",
+          cleanupError,
+        ),
+    );
+    return { ok: false, message: "Could not create home. Please try again." };
+  }
 
   revalidatePath("/");
   revalidatePath("/my-homes");
@@ -328,16 +368,6 @@ export type LoadMoreHomesFilters = {
   bathroom?: number;
 };
 
-export type LoadMoreHomeItem = {
-  id: string;
-  title: string | null;
-  price: number | null;
-  description: string | null;
-  country: string | null;
-  imageUrls: (string | null)[];
-  isInFavoriteList: boolean;
-};
-
 const MAX_SKIP = 10000;
 
 export async function loadMoreHomes({
@@ -347,7 +377,7 @@ export async function loadMoreHomes({
   guest,
   room,
   bathroom,
-}: { skip: number } & LoadMoreHomesFilters): Promise<LoadMoreHomeItem[]> {
+}: { skip: number } & LoadMoreHomesFilters): Promise<HomeCardData[]> {
   await connection();
 
   if (!Number.isInteger(skip) || skip < 0 || skip > MAX_SKIP) {
@@ -357,7 +387,7 @@ export async function loadMoreHomes({
   const { getUser } = getKindeServerSession();
   const user = await getUser();
 
-  const homes = await prisma.home.findMany({
+  return findHomeCards({
     where: {
       addedCategory: true,
       addedLocation: true,
@@ -368,44 +398,9 @@ export async function loadMoreHomes({
       bedrooms: clampCountArg(room),
       bathrooms: clampCountArg(bathroom),
     },
-    orderBy: { createdAT: "desc" },
-    skip,
+    userId: user?.id,
     take: 10,
-    select: {
-      id: true,
-      title: true,
-      price: true,
-      description: true,
-      country: true,
-      images: {
-        orderBy: [{ isPrimary: "desc" }, { position: "asc" }],
-        select: { path: true },
-      },
-      Favorite: {
-        where: { userId: user?.id ?? "" },
-        select: { id: true },
-        take: 1,
-      },
-    },
-  });
-
-  const allPaths = homes.flatMap((h) => h.images.map((i) => i.path));
-  const urls = await getImageUrls(allPaths);
-  let cursor = 0;
-
-  return homes.map((h) => {
-    const homeUrls = h.images.map(() => urls[cursor++] ?? null);
-    return {
-      id: h.id,
-      title: h.title,
-      price: h.price,
-      description: h.description,
-      country: h.country,
-      imageUrls: homeUrls,
-      isInFavoriteList: user?.id
-        ? (h.Favorite[0]?.id ?? null) !== null
-        : false,
-    };
+    skip,
   });
 }
 
@@ -562,21 +557,56 @@ export async function updateHomeImages(
     };
   }
 
-  const uploadedRows: { id: string }[] = [];
+  let uploadedRows: { id: string }[] = [];
   if (newImageFiles.length > 0) {
     const basePosition = await prisma.homeImage.count({ where: { homeId } });
-    for (const [index, file] of newImageFiles.entries()) {
-      const { path } = await uploadHomeImage(homeId, file);
-      const created = await prisma.homeImage.create({
-        data: {
-          homeId,
-          path,
-          isPrimary: false,
-          position: basePosition + index,
-        },
-        select: { id: true },
-      });
-      uploadedRows.push(created);
+
+    // Upload in parallel, but wait for every upload to settle so cleanup never
+    // races an in-flight request.
+    const results = await Promise.allSettled(
+      newImageFiles.map(async (file, index) => {
+        const { path } = await uploadHomeImage(homeId, file);
+        return { path, position: basePosition + index };
+      }),
+    );
+
+    const uploads = results.flatMap((result) =>
+      result.status === "fulfilled" ? [result.value] : [],
+    );
+
+    if (uploads.length !== newImageFiles.length) {
+      console.error(
+        "[updateHomeImages] upload failed:",
+        results.find((result) => result.status === "rejected"),
+      );
+      await deleteHomeImages(uploads.map((upload) => upload.path)).catch(
+        (cleanupError) =>
+          console.error("[updateHomeImages] image cleanup failed:", cleanupError),
+      );
+      return { ok: false, message: "Could not upload photos. Please try again." };
+    }
+
+    try {
+      uploadedRows = await prisma.$transaction(
+        uploads.map((upload) =>
+          prisma.homeImage.create({
+            data: {
+              homeId,
+              path: upload.path,
+              isPrimary: false,
+              position: upload.position,
+            },
+            select: { id: true },
+          }),
+        ),
+      );
+    } catch (err) {
+      console.error("[updateHomeImages] row creation failed:", err);
+      await deleteHomeImages(uploads.map((upload) => upload.path)).catch(
+        (cleanupError) =>
+          console.error("[updateHomeImages] image cleanup failed:", cleanupError),
+      );
+      return { ok: false, message: "Could not upload photos. Please try again." };
     }
   }
 

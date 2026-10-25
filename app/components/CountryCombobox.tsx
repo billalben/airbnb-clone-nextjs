@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Combobox } from "@base-ui/react/combobox";
 import { Check, ChevronsUpDown, X } from "lucide-react";
-import { getAllCountries } from "@/app/lib/getCountries";
+import { countryOptions } from "@/app/lib/countries-client";
 import { cn } from "@/lib/utils";
 
 type Country = {
@@ -36,16 +36,7 @@ export function CountryCombobox({
   className?: string;
   "aria-invalid"?: boolean;
 }) {
-  const countries = React.useMemo<Country[]>(
-    () =>
-      getAllCountries().map((c) => ({
-        value: c.value,
-        label: c.label,
-        flag: c.flag,
-        region: c.region,
-      })),
-    [],
-  );
+  const countries: Country[] = countryOptions;
 
   const findByValue = React.useCallback(
     (v: string | null | undefined): Country | null =>

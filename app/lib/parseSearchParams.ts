@@ -1,8 +1,7 @@
 import { categoryItems } from "./categoryItems";
-import { getAllCountries } from "./getCountries";
+import { isValidCountry } from "./getCountries";
 
 const validFilters = new Set(categoryItems.map((c) => c.name));
-const validCountries = new Set(getAllCountries().map((c) => c.value));
 
 function firstString(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) return value[0];
@@ -22,7 +21,7 @@ export function parseCountry(
 ): string | undefined {
   const value = firstString(raw);
   if (!value) return undefined;
-  return validCountries.has(value) ? value : undefined;
+  return isValidCountry(value) ? value : undefined;
 }
 
 export function clampCount(value: number, max = 10): number {

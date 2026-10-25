@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useCountries } from "../lib/getCountries";
+import { getCountryOption } from "../lib/countries-client";
 import { FavoriteButton, FavoriteLoginLink } from "@/components/favorite-form";
 import { toggleFavorite } from "../actions";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface iAppProps {
-  imageUrls: (string | null)[];
+  imageUrl: string | null;
   title: string | null;
   location: string | null;
   price: number | null;
@@ -22,7 +22,7 @@ interface iAppProps {
 }
 
 export function ListingCardClient({
-  imageUrls,
+  imageUrl,
   title,
   location,
   price,
@@ -34,11 +34,7 @@ export function ListingCardClient({
   className,
   actions,
 }: iAppProps) {
-  const { getCountryByValue } = useCountries();
-  const country = location ? getCountryByValue(location) : undefined;
-
-  const validUrls = imageUrls.filter((u): u is string => Boolean(u));
-  const shownUrl = validUrls[0] ?? null;
+  const country = getCountryOption(location);
 
   const heart = userId ? (
     <FavoriteButton
@@ -54,9 +50,9 @@ export function ListingCardClient({
 
   const media = (
     <div className="relative aspect-4/3 w-full overflow-hidden bg-muted *:[img]:rounded-none">
-      {shownUrl ? (
+      {imageUrl ? (
         <img
-          src={shownUrl}
+          src={imageUrl}
           alt={title ? `Image of ${title}` : "Image of Home"}
           className="absolute inset-0 h-full w-full object-cover transition-opacity duration-500"
         />
