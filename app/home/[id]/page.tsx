@@ -1,4 +1,4 @@
-import { createReservation } from "@/app/actions";
+import { createReservation } from "@/app/actions/reservations";
 import { CategoryShowcase } from "@/app/components/CategoryShowcase";
 import { HomeImageCarousel } from "@/app/components/HomeImageCarousel";
 import { HomeMap } from "@/app/components/HomeMap";
@@ -10,7 +10,6 @@ import { getImageUrls } from "@/app/lib/supabase/storage";
 import { getCurrentUser } from "@/app/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -41,7 +40,7 @@ async function getData(homeId: string) {
         select: { startDate: true, endDate: true },
       },
       User: {
-        select: { profileImage: true, firstName: true },
+        select: { profileImage: true, firstName: true, createdAt: true },
       },
     },
   });
@@ -116,11 +115,12 @@ export default async function HomeRoute({
       isPrimary: img.isPrimary,
     })) ?? [];
   const country = getCountryByValue(data?.country as string);
-  const { getUser } = getKindeServerSession();
-  const kindeUser = await getUser();
   const dbUser = await getCurrentUser();
 
   const isOwner = !!dbUser?.id && data?.userId === dbUser.id;
+  const hostSinceYear = data?.User?.createdAt
+    ? new Date(data.User.createdAt).getFullYear()
+    : null;
 
   return (
     <div className="container mx-auto mb-16 mt-6 md:mt-10">
@@ -170,7 +170,11 @@ export default async function HomeRoute({
               />
               <div className="ml-4 flex flex-col">
                 <h3 className="font-medium">Hosted by {data?.User?.firstName}</h3>
-                <p className="text-sm text-muted-foreground">Host since 2023</p>
+                {hostSinceYear ? (
+                  <p className="text-sm text-muted-foreground">
+                    Host since {hostSinceYear}
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -217,7 +221,7 @@ export default async function HomeRoute({
 
           <SelectCalender reservation={data?.Reservation} />
 
-          {kindeUser?.id ? (
+          {dbUser?.id ? (
             <div className="mt-6">
               <ReservationSubmitButton />
             </div>

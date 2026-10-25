@@ -5,7 +5,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { deleteHome } from "../../actions";
+import { deleteHome } from "../../actions/homes";
 
 export function AdminDeleteHomeButton({ homeId }: { homeId: string }) {
   const [pending, startTransition] = useTransition();

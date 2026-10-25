@@ -1,5 +1,5 @@
 import { HomeFormWizard } from "@/app/components/home-form/HomeFormWizard";
-import { createHome } from "@/app/actions";
+import { createHome } from "@/app/actions/homes";
 import { requireUser } from "@/app/lib/auth";
 
 export default async function CreateHomePage() {

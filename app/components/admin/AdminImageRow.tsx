@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Star, Trash2 } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { deleteHomeImage, setPrimaryImage } from "../../actions";
+import { deleteHomeImage, setPrimaryImage } from "../../actions/homes";
 
 export function AdminImageRow({
   homeId,

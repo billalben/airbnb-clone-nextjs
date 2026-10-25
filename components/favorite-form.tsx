@@ -5,19 +5,18 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import type { ActionResult } from "@/app/lib/action-result";
 
 export function FavoriteButton({
   homeId,
-  userId,
   pathName,
   initialIsFav,
   toggleAction,
 }: {
   homeId: string;
-  userId: string;
   pathName: string;
   initialIsFav: boolean;
-  toggleAction: (formData: FormData) => Promise<{ ok: boolean; message?: string }>;
+  toggleAction: (formData: FormData) => Promise<ActionResult>;
 }) {
   const [pending, startTransition] = useTransition();
   const [isFav, setIsFav] = useState(initialIsFav);
@@ -50,7 +49,6 @@ export function FavoriteButton({
       onSubmit={onSubmit}
     >
       <input type="hidden" name="homeId" value={homeId} />
-      <input type="hidden" name="userId" value={userId} />
       <input type="hidden" name="pathName" value={pathName} />
       <HeartButton
         filled={isFav}

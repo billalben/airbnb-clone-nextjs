@@ -14,12 +14,7 @@ import { CountryCombobox } from "../CountryCombobox";
 
 type FormShape = UseFormReturn<HomeFormValues>;
 
-export function LocationStep({
-  form,
-}: {
-  form: FormShape;
-  countries?: { value: string; label: string }[];
-}) {
+export function LocationStep({ form }: { form: FormShape }) {
   const error = form.formState.errors.country?.message;
   return (
     <FieldGroup>

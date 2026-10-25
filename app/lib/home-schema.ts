@@ -1,12 +1,12 @@
 import * as z from "zod";
+import { COUNTER_MAX, COUNTER_MIN } from "./counter-limits";
+
+export { COUNTER_MAX, COUNTER_MIN };
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 export const MAX_IMAGES_PER_HOME = 4;
-
-export const COUNTER_MIN = 1;
-export const COUNTER_MAX = 10;
 
 const imageSchema = z
   .instanceof(File)
@@ -49,6 +49,20 @@ export const homeFormSchema = z
 export const homeEditFormSchema = z.object(baseShape);
 
 export type HomeFormValues = z.infer<typeof homeEditFormSchema>;
+
+// Values submitted by the client wizard. Parsed and validated server-side by
+// the same Zod schemas; no FormData round-trip is involved.
+export type HomeFormInput = {
+  categoryName?: string;
+  title?: string;
+  description?: string;
+  price?: number;
+  image?: File;
+  guests?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  country?: string;
+};
 
 export const newImageFileSchema = z
   .instanceof(File)

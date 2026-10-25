@@ -4,7 +4,7 @@ import { Trash2, Loader2 } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { deleteReservation } from "../../actions";
+import { deleteReservation } from "../../actions/admin";
 
 export function AdminDeleteReservationButton({
   reservationId,

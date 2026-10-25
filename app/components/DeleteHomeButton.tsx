@@ -14,7 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Trash2, Loader2 } from "lucide-react";
-import { deleteHome } from "../actions";
+import { deleteHome } from "../actions/homes";
 
 export function DeleteHomeButton({
   homeId,

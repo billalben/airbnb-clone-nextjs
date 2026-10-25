@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { ListingCardClient } from "./ListingCardClient";
 import { SkeltonCard } from "./SkeletonCard";
-import { loadMoreHomes } from "@/app/actions";
+import { loadMoreHomes } from "@/app/actions/homes";
 import type { ParsedSearchParams } from "@/app/lib/parseSearchParams";
 import type { HomeCardData } from "@/app/lib/home-cards";
 

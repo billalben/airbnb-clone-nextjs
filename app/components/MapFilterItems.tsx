@@ -41,7 +41,7 @@ export function MapFilterItems() {
         >
           <Link
             href={href}
-            aria-pressed={isActive}
+            aria-current={isActive ? "page" : undefined}
             className={cn(
               "flex h-full flex-col items-center justify-center gap-2 border-b-2 border-transparent px-2 py-2",
               isActive ? "border-foreground opacity-100" : "opacity-60",

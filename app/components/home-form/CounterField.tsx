@@ -1,6 +1,6 @@
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { COUNTER_MAX, COUNTER_MIN } from "@/app/lib/home-schema";
+import { COUNTER_MAX, COUNTER_MIN } from "@/app/lib/counter-limits";
 
 export function CounterField({
   id,

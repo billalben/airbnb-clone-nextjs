@@ -37,7 +37,7 @@ Deployed at **https://airbnb-clone-bz.vercel.app**
 | Auth | [Kinde](https://kinde.com/) (login, register, sessions) |
 | Forms & validation | react-hook-form + zod |
 | Maps | react-leaflet / Leaflet + OpenStreetMap |
-| UI helpers | embla-carousel, Base UI combobox, next-themes, sonner, date-fns, world-countries |
+| UI helpers | embla-carousel, Base UI combobox, next-themes, sonner, world-countries |
 
 ## Project structure
 

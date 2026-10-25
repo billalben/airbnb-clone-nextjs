@@ -4,7 +4,7 @@ import { Trash2, Loader2 } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { deleteUser } from "../../actions";
+import { deleteUser } from "../../actions/admin";
 
 export function AdminDeleteUserButton({
   userId,

@@ -11,8 +11,10 @@ import {
   homeEditFormSchema,
   homeFormSchema,
   stepFields,
+  type HomeFormInput,
   type HomeFormValues,
 } from "@/app/lib/home-schema";
+import type { ActionResult } from "@/app/lib/action-result";
 import { getSteps, StepperHeader, type StepKey } from "./StepperHeader";
 import { CategoryStep, DetailsStep, ImageStep } from "./Steps";
 import { LocationStep } from "./LocationStep";
@@ -30,16 +32,12 @@ export type HomeFormDefaults = {
   country?: string | null;
 };
 
-export type HomeFormActionResult =
-  | { ok: true }
-  | { ok: false; fieldErrors?: Record<string, string[]>; message?: string };
+export type HomeFormActionResult = ActionResult;
 
 export type HomeFormProps = {
   mode: HomeFormMode;
   defaultValues?: HomeFormDefaults;
-  action: (
-    values: Record<string, string | number | File | undefined>,
-  ) => Promise<HomeFormActionResult>;
+  action: (values: HomeFormInput) => Promise<HomeFormActionResult>;
 };
 
 export function HomeFormWizard({ mode, defaultValues, action }: HomeFormProps) {
@@ -98,7 +96,7 @@ export function HomeFormWizard({ mode, defaultValues, action }: HomeFormProps) {
   const onSubmit = form.handleSubmit(
     (values) => {
       setServerError(null);
-      const payload: Record<string, string | number | File | undefined> = {
+      const payload: HomeFormInput = {
         categoryName: values.categoryName,
         title: values.title,
         description: values.description,

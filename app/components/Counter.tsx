@@ -1,12 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { COUNTER_MAX, COUNTER_MIN } from "@/app/lib/counter-limits";
 import { Minus, Plus } from "lucide-react";
 import { useState } from "react";
 
 export function Counter({
   name,
-  defaultValue = 1,
+  defaultValue = COUNTER_MIN,
 }: {
   name: string;
   defaultValue?: number;
@@ -14,12 +15,12 @@ export function Counter({
   const [amount, setAmount] = useState(defaultValue);
 
   function increase() {
-    if (amount >= 10) return;
+    if (amount >= COUNTER_MAX) return;
     setAmount((prev) => prev + 1);
   }
 
   function decrease() {
-    if (amount === 0) return;
+    if (amount <= COUNTER_MIN) return;
     setAmount((prev) => prev - 1);
   }
 
@@ -28,7 +29,7 @@ export function Counter({
       <input type="hidden" name={name} value={amount} />
 
       <Button
-        disabled={amount === 1}
+        disabled={amount <= COUNTER_MIN}
         variant="outline"
         size="icon"
         type="button"
@@ -40,7 +41,7 @@ export function Counter({
       <p className="min-w-5 text-center text-lg font-medium">{amount}</p>
 
       <Button
-        disabled={amount >= 10}
+        disabled={amount >= COUNTER_MAX}
         variant="outline"
         size="icon"
         type="button"

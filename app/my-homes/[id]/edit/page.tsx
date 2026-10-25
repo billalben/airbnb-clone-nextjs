@@ -10,7 +10,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { updateHome, updateHomeImages } from "@/app/actions";
+import { updateHome, updateHomeImages } from "@/app/actions/homes";
 import { connection } from "next/server";
 
 async function getHome(homeId: string) {

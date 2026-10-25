@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { getCountryOption } from "../lib/countries-client";
 import { FavoriteButton, FavoriteLoginLink } from "@/components/favorite-form";
-import { toggleFavorite } from "../actions";
+import { toggleFavorite } from "../actions/favorites";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,6 @@ export function ListingCardClient({
   const heart = userId ? (
     <FavoriteButton
       homeId={homeId}
-      userId={userId}
       pathName={pathName}
       initialIsFav={isInFavoriteList}
       toggleAction={toggleFavorite}
@@ -79,34 +78,34 @@ export function ListingCardClient({
     </div>
   );
 
-  const card = (
-    <Card
-      className={cn(
-        "h-full gap-0 overflow-hidden py-0 transition-shadow hover:shadow-md",
-        className,
-      )}
-    >
+  const cardClass = cn(
+    "h-full gap-0 overflow-hidden py-0 transition-shadow hover:shadow-md",
+    className,
+  );
+
+  const content = (
+    <>
       {media}
       {info}
-      {actions}
-    </Card>
+    </>
   );
 
   if (hideLink) {
-    return <div className="h-full">{card}</div>;
+    return (
+      <div className="h-full">
+        <Card className={cardClass}>
+          {content}
+          {actions}
+        </Card>
+      </div>
+    );
   }
 
   if (actions) {
     return (
-      <Card
-        className={cn(
-          "h-full gap-0 overflow-hidden py-0 transition-shadow hover:shadow-md",
-          className,
-        )}
-      >
+      <Card className={cardClass}>
         <Link href={`/home/${homeId}`} className="group block h-full">
-          {media}
-          {info}
+          {content}
         </Link>
         {actions}
       </Card>
@@ -115,7 +114,7 @@ export function ListingCardClient({
 
   return (
     <Link href={`/home/${homeId}`} className="group block h-full">
-      {card}
+      <Card className={cardClass}>{content}</Card>
     </Link>
   );
 }
